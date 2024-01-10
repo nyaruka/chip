@@ -109,7 +109,7 @@ func (s *Server) handleStart(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// hijack HTTP the connection...
+	// hijack the HTTP connection...
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		writeErrorResponse(w, http.StatusInternalServerError, "error upgrading connection")
@@ -124,7 +124,7 @@ func (s *Server) handleStart(w http.ResponseWriter, r *http.Request) {
 
 type sendRequest struct {
 	Client string `json:"client" validate:"required"`
-	Text   string `json:"message" validate:"required"`
+	Text   string `json:"text" validate:"required"`
 }
 
 func (s *Server) handleSend(w http.ResponseWriter, r *http.Request) {
@@ -174,10 +174,13 @@ func (s *Server) unregister(c *Client) {
 	slog.Info("client unregistered", "identifier", c.identifier)
 }
 
-func (s *Server) messageReceived(c *Client, m string) {
-	// TODO call callback
+func (s *Server) eventReceived(c *Client, e Event) {
+	slog.Info("event received", "client", c.identifier, "type", e.Type())
 
-	slog.Info("message received", "client", c.identifier, "message", string(m))
+	switch typed := e.(type) {
+	case *msgInEvent:
+		notifyCourier(s.config, c, typed)
+	}
 }
 
 func writeErrorResponse(w http.ResponseWriter, status int, msg string) {

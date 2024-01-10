@@ -11,7 +11,7 @@ func NewDefaultConfig() *Config {
 	return &Config{
 		Address:     "localhost",
 		Port:        8070,
-		CourierHost: "courier",
+		CourierHost: "localhost:8080",
 		CourierSSL:  false,
 	}
 }

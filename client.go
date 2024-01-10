@@ -64,7 +64,13 @@ func (c *Client) readUntilClose() {
 			break
 		}
 
-		c.server.messageReceived(c, string(message))
+		// for now only one type of event supported
+		evt := &msgInEvent{}
+		if err := jsonx.Unmarshal(message, evt); err != nil {
+			log.Error("unable to unmarshal message", "error", err)
+		} else {
+			c.server.eventReceived(c, evt)
+		}
 	}
 }
 

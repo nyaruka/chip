@@ -29,3 +29,8 @@ type msgOutEvent struct {
 func newMsgOutEvent(text string) *msgOutEvent {
 	return &msgOutEvent{baseEvent: baseEvent{Type_: "msg_out"}, Text: text}
 }
+
+type msgInEvent struct {
+	baseEvent
+	Text string `json:"text"`
+}
