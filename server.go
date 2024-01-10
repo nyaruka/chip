@@ -9,6 +9,8 @@ import (
 
 	"github.com/gorilla/websocket"
 	"github.com/nyaruka/gocommon/jsonx"
+	"github.com/nyaruka/gocommon/urns"
+	"github.com/nyaruka/gocommon/uuids"
 )
 
 var upgrader = websocket.Upgrader{
@@ -91,24 +93,38 @@ func (s *Server) handleIndex(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleStart(w http.ResponseWriter, r *http.Request) {
-	log := slog.With("comp", "server")
-
-	// hijack HTTP connection...
-	conn, err := upgrader.Upgrade(w, r, nil)
-	if err != nil {
-		log.Error("error upgrading connection", "error", err)
+	channelUUID := r.URL.Query().Get("channel")
+	if !uuids.IsV4(channelUUID) {
+		writeErrorResponse(w, http.StatusBadRequest, "invalid channel UUID")
 		return
 	}
 
-	client := NewClient(s, conn)
+	identifier := r.URL.Query().Get("identifier")
+	if identifier != "" {
+		_, err := urns.NewWebChatURN(identifier)
+		if err != nil {
+			writeErrorResponse(w, http.StatusBadRequest, "invalid client identifier")
+			slog.Error("invalid client identifier", "error", err)
+			return
+		}
+	}
+
+	// hijack HTTP the connection...
+	conn, err := upgrader.Upgrade(w, r, nil)
+	if err != nil {
+		writeErrorResponse(w, http.StatusInternalServerError, "error upgrading connection")
+		return
+	}
+
+	client := NewClient(s, conn, uuids.UUID(channelUUID), identifier)
 	s.register(client)
 
 	client.Start()
 }
 
 type sendRequest struct {
-	Client  string `json:"client" validate:"required"`
-	Message string `json:"message" validate:"required"`
+	Client string `json:"client" validate:"required"`
+	Text   string `json:"message" validate:"required"`
 }
 
 func (s *Server) handleSend(w http.ResponseWriter, r *http.Request) {
@@ -120,17 +136,17 @@ func (s *Server) handleSend(w http.ResponseWriter, r *http.Request) {
 	payload := &sendRequest{}
 
 	if err := jsonx.UnmarshalWithLimit(r.Body, payload, 1024*1024); err != nil {
-		w.WriteHeader(http.StatusBadRequest)
+		writeErrorResponse(w, http.StatusBadRequest, "error reading request")
 		return
 	}
 
 	client := s.client(payload.Client)
 	if client == nil {
-		w.WriteHeader(http.StatusNotFound)
+		writeErrorResponse(w, http.StatusNotFound, "no such client")
 		return
 	}
 
-	client.Send(payload.Message)
+	client.Send(newMsgOutEvent(payload.Text))
 
 	w.Write(jsonx.MustMarshal(map[string]any{"status": "queued"}))
 }
@@ -162,4 +178,9 @@ func (s *Server) messageReceived(c *Client, m string) {
 	// TODO call callback
 
 	slog.Info("message received", "client", c.identifier, "message", string(m))
+}
+
+func writeErrorResponse(w http.ResponseWriter, status int, msg string) {
+	w.WriteHeader(status)
+	w.Write(jsonx.MustMarshal(map[string]string{"error": msg}))
 }

@@ -5,22 +5,30 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
+	"github.com/nyaruka/gocommon/jsonx"
+	"github.com/nyaruka/gocommon/random"
 	"github.com/nyaruka/gocommon/uuids"
 )
 
 type Client struct {
-	server     *Server
-	conn       *websocket.Conn
-	identifier string
-	outbox     chan string
+	server      *Server
+	conn        *websocket.Conn
+	channelUUID uuids.UUID
+	identifier  string
+	outbox      chan Event
 }
 
-func NewClient(s *Server, c *websocket.Conn) *Client {
+func NewClient(s *Server, c *websocket.Conn, channelUUID uuids.UUID, identifier string) *Client {
+	if identifier == "" {
+		identifier = newIdentifier()
+	}
+
 	return &Client{
-		server:     s,
-		conn:       c,
-		identifier: string(uuids.New()),
-		outbox:     make(chan string, 10),
+		server:      s,
+		conn:        c,
+		channelUUID: channelUUID,
+		identifier:  identifier,
+		outbox:      make(chan Event, 10),
 	}
 }
 
@@ -30,6 +38,8 @@ func (c *Client) Start() {
 	c.conn.SetPongHandler(c.pong)
 
 	c.server.wg.Add(2)
+
+	c.Send(newChatStartedEvent(c.identifier))
 
 	go c.readUntilClose()
 	go c.writeUntilClose()
@@ -70,7 +80,7 @@ func (c *Client) writeUntilClose() {
 
 	for {
 		select {
-		case message, ok := <-c.outbox:
+		case event, ok := <-c.outbox:
 			c.conn.SetWriteDeadline(time.Now().Add(10 * time.Second))
 
 			// outbox channel has been closed
@@ -79,12 +89,13 @@ func (c *Client) writeUntilClose() {
 				return
 			}
 
-			err := c.conn.WriteMessage(websocket.TextMessage, []byte(message))
+			err := c.conn.WriteMessage(websocket.TextMessage, jsonx.MustMarshal(event))
 			if err != nil {
 				log.Error("error writing message", "error", err)
 			}
 		case <-ticker.C:
 			c.conn.SetWriteDeadline(time.Now().Add(10 * time.Second))
+
 			if err := c.conn.WriteMessage(websocket.PingMessage, nil); err != nil {
 				return
 			}
@@ -101,10 +112,16 @@ func (c *Client) pong(m string) error {
 	return nil
 }
 
-func (c *Client) Send(msg string) {
-	c.outbox <- msg
+func (c *Client) Send(e Event) {
+	c.outbox <- e
 }
 
 func (c *Client) Stop() {
 	c.conn.Close()
+}
+
+var identifierRunes = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789")
+
+func newIdentifier() string {
+	return random.String(24, identifierRunes)
 }
