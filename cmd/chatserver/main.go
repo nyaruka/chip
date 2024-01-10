@@ -8,6 +8,7 @@ import (
 	"runtime"
 	"syscall"
 
+	"github.com/nyaruka/ezconf"
 	"github.com/nyaruka/tembachat"
 )
 
@@ -18,16 +19,30 @@ var (
 )
 
 func main() {
+	config := tembachat.NewDefaultConfig()
+	config.Version = version
+	loader := ezconf.NewLoader(
+		config,
+		"chatserver", "Temba Chat - webchat server",
+		[]string{"config.toml"},
+	)
+	loader.MustLoad()
+
+	var level slog.Level
+	err := level.UnmarshalText([]byte(config.LogLevel))
+	if err != nil {
+		ulog.Fatalf("invalid log level %s", level)
+		os.Exit(1)
+	}
+
 	// configure our logger
-	logHandler := slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo})
+	logHandler := slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: level})
 	slog.SetDefault(slog.New(logHandler))
 
 	logger := slog.With("comp", "main")
-	logger.Info("starting chat server", "version", version, "released", date)
+	logger.Info("starting chatserver", "version", version, "released", date)
 
-	cfg := tembachat.NewDefaultConfig()
-
-	cs := tembachat.NewServer(cfg)
+	cs := tembachat.NewServer(config)
 	if err := cs.Start(); err != nil {
 		logger.Error("unable to start server", "error", err)
 		os.Exit(1)
