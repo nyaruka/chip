@@ -1,4 +1,4 @@
-package tembachat
+package webchat
 
 type Event interface {
 	Type() string

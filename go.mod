@@ -1,4 +1,4 @@
-module github.com/nyaruka/tembachat
+module github.com/nyaruka/webchat
 
 go 1.21
 

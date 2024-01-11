@@ -9,7 +9,7 @@ import (
 	"syscall"
 
 	"github.com/nyaruka/ezconf"
-	"github.com/nyaruka/tembachat"
+	"github.com/nyaruka/webchat"
 )
 
 var (
@@ -19,7 +19,7 @@ var (
 )
 
 func main() {
-	config := tembachat.NewDefaultConfig()
+	config := webchat.NewDefaultConfig()
 	config.Version = version
 	loader := ezconf.NewLoader(
 		config,
@@ -42,7 +42,7 @@ func main() {
 	logger := slog.With("comp", "main")
 	logger.Info("starting chatserver", "version", version, "released", date)
 
-	cs := tembachat.NewServer(config)
+	cs := webchat.NewServer(config)
 	if err := cs.Start(); err != nil {
 		logger.Error("unable to start server", "error", err)
 		os.Exit(1)
@@ -52,7 +52,7 @@ func main() {
 }
 
 // handleSignals takes care of trapping quit, interrupt or terminate signals and doing the right thing
-func handleSignals(cs tembachat.Server) {
+func handleSignals(cs webchat.Server) {
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
 

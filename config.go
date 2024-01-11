@@ -1,4 +1,4 @@
-package tembachat
+package webchat
 
 type Config struct {
 	Address     string `help:"the address to bind our web server to"`
