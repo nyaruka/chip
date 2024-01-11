@@ -23,11 +23,12 @@ func newChatStartedEvent(identifier string) *chatStartedEvent {
 
 type msgOutEvent struct {
 	baseEvent
-	Text string `json:"text"`
+	Text   string `json:"text"`
+	Origin string `json:"origin"`
 }
 
-func newMsgOutEvent(text string) *msgOutEvent {
-	return &msgOutEvent{baseEvent: baseEvent{Type_: "msg_out"}, Text: text}
+func newMsgOutEvent(text, origin string) *msgOutEvent {
+	return &msgOutEvent{baseEvent: baseEvent{Type_: "msg_out"}, Text: text, Origin: origin}
 }
 
 type msgInEvent struct {

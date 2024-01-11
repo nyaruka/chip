@@ -123,8 +123,9 @@ func (s *Server) handleStart(w http.ResponseWriter, r *http.Request) {
 }
 
 type sendRequest struct {
-	Client string `json:"client" validate:"required"`
-	Text   string `json:"text" validate:"required"`
+	Identifier string `json:"identifier" validate:"required"`
+	Text       string `json:"text" validate:"required"`
+	Origin     string `json:"origin" validate:"required"`
 }
 
 func (s *Server) handleSend(w http.ResponseWriter, r *http.Request) {
@@ -140,13 +141,13 @@ func (s *Server) handleSend(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	client := s.client(payload.Client)
+	client := s.client(payload.Identifier)
 	if client == nil {
 		writeErrorResponse(w, http.StatusNotFound, "no such client")
 		return
 	}
 
-	client.Send(newMsgOutEvent(payload.Text))
+	client.Send(newMsgOutEvent(payload.Text, payload.Origin))
 
 	w.Write(jsonx.MustMarshal(map[string]any{"status": "queued"}))
 }
