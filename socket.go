@@ -16,7 +16,17 @@ const (
 	pingPeriod = 30 * time.Second
 )
 
-type Socket struct {
+type Socket interface {
+	Start()
+	Send(msg []byte)
+	Close()
+
+	OnMessage(fn func([]byte))
+	OnClose(fn func(int))
+}
+
+// Socket implemention using gorilla library
+type socket struct {
 	conn             *websocket.Conn
 	onMessage        func([]byte)
 	onClose          func(int)
@@ -29,10 +39,10 @@ type Socket struct {
 	monitorWaitGroup sync.WaitGroup
 }
 
-func NewSocket(c *websocket.Conn, maxReadBytes int64, sendBuffer int) *Socket {
+func NewSocket(c *websocket.Conn, maxReadBytes int64, sendBuffer int) Socket {
 	c.SetReadLimit(maxReadBytes)
 
-	return &Socket{
+	return &socket{
 		conn:        c,
 		onMessage:   func([]byte) {},
 		onClose:     func(int) {},
@@ -44,10 +54,10 @@ func NewSocket(c *websocket.Conn, maxReadBytes int64, sendBuffer int) *Socket {
 	}
 }
 
-func (s *Socket) OnMessage(fn func([]byte)) { s.onMessage = fn }
-func (s *Socket) OnClose(fn func(int))      { s.onClose = fn }
+func (s *socket) OnMessage(fn func([]byte)) { s.onMessage = fn }
+func (s *socket) OnClose(fn func(int))      { s.onClose = fn }
 
-func (s *Socket) Start() {
+func (s *socket) Start() {
 	s.conn.SetReadDeadline(time.Now().Add(maxReadWait))
 	s.conn.SetPongHandler(s.pong)
 
@@ -56,11 +66,11 @@ func (s *Socket) Start() {
 	go s.writer()
 }
 
-func (s *Socket) Send(msg []byte) {
+func (s *socket) Send(msg []byte) {
 	s.outbox <- msg
 }
 
-func (s *Socket) Close() {
+func (s *socket) Close() {
 	s.conn.Close() // causes reader to stop
 	s.stopWriter <- true
 	s.stopMonitor <- true
@@ -68,13 +78,13 @@ func (s *Socket) Close() {
 	s.monitorWaitGroup.Wait()
 }
 
-func (s *Socket) pong(m string) error {
+func (s *socket) pong(m string) error {
 	s.conn.SetReadDeadline(time.Now().Add(maxReadWait))
 
 	return nil
 }
 
-func (s *Socket) monitor() {
+func (s *socket) monitor() {
 	s.monitorWaitGroup.Add(1)
 	defer s.monitorWaitGroup.Done()
 
@@ -105,7 +115,7 @@ out:
 	s.onClose(closeCode)
 }
 
-func (s *Socket) reader() {
+func (s *socket) reader() {
 	s.rwWaitGroup.Add(1)
 	defer s.rwWaitGroup.Done()
 
@@ -120,7 +130,7 @@ func (s *Socket) reader() {
 	}
 }
 
-func (s *Socket) writer() {
+func (s *socket) writer() {
 	s.rwWaitGroup.Add(1)
 	defer s.rwWaitGroup.Done()
 

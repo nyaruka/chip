@@ -52,7 +52,7 @@ func main() {
 }
 
 // handleSignals takes care of trapping quit, interrupt or terminate signals and doing the right thing
-func handleSignals(cs *tembachat.Server) {
+func handleSignals(cs tembachat.Server) {
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
 

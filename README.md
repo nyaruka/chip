@@ -1,5 +1,7 @@
 # temba-chat
 
+[![Build Status](https://github.com/nyaruka/temba-chat/workflows/CI/badge.svg)](https://github.com/nyaruka/temba-chat/actions?query=workflow%3ACI) 
+
 Webchat server that talks to [Courier](https://github.com/nyaruka/courier/).
 
 To start chat session as new user:

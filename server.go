@@ -19,7 +19,17 @@ var upgrader = websocket.Upgrader{
 	WriteBufferSize: 1024,
 }
 
-type Server struct {
+type Server interface {
+	Start() error
+	Stop()
+
+	Register(*Client)
+	Unregister(*Client)
+
+	EventReceived(*Client, Event)
+}
+
+type server struct {
 	config     *Config
 	httpServer *http.Server
 	wg         sync.WaitGroup
@@ -28,8 +38,8 @@ type Server struct {
 	clientMutex *sync.RWMutex
 }
 
-func NewServer(cfg *Config) *Server {
-	return &Server{
+func NewServer(cfg *Config) Server {
+	return &server{
 		config: cfg,
 		httpServer: &http.Server{
 			Addr: fmt.Sprintf("%s:%d", cfg.Address, cfg.Port),
@@ -40,7 +50,7 @@ func NewServer(cfg *Config) *Server {
 	}
 }
 
-func (s *Server) Start() error {
+func (s *server) Start() error {
 	log := slog.With("comp", "server", "address", s.config.Address, "port", s.config.Port)
 
 	http.HandleFunc("/", s.handleIndex)
@@ -62,7 +72,7 @@ func (s *Server) Start() error {
 	return nil
 }
 
-func (s *Server) Stop() {
+func (s *server) Stop() {
 	log := slog.With("comp", "server")
 
 	log.Info("stopping server...")
@@ -85,7 +95,9 @@ func (s *Server) Stop() {
 	s.wg.Wait()
 }
 
-func (s *Server) handleIndex(w http.ResponseWriter, r *http.Request) {
+func (s *server) Config() *Config { return s.config }
+
+func (s *server) handleIndex(w http.ResponseWriter, r *http.Request) {
 	s.clientMutex.RLock()
 	resp := make(map[string]any, len(s.clients))
 	for id := range s.clients {
@@ -96,7 +108,7 @@ func (s *Server) handleIndex(w http.ResponseWriter, r *http.Request) {
 	w.Write(jsonx.MustMarshal(resp))
 }
 
-func (s *Server) handleStart(w http.ResponseWriter, r *http.Request) {
+func (s *server) handleStart(w http.ResponseWriter, r *http.Request) {
 	channelUUID := r.URL.Query().Get("channel")
 	if !uuids.IsV4(channelUUID) {
 		writeErrorResponse(w, http.StatusBadRequest, "invalid channel UUID")
@@ -120,10 +132,9 @@ func (s *Server) handleStart(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	socket := NewSocket(conn, 4096, 10)
+	sock := NewSocket(conn, 4096, 10)
 
-	client := NewClient(s, socket, uuids.UUID(channelUUID), identifier)
-	s.register(client)
+	client := NewClient(s, sock, uuids.UUID(channelUUID), identifier)
 
 	client.Send(newChatStartedEvent(client.identifier))
 }
@@ -134,7 +145,7 @@ type sendRequest struct {
 	Origin     string `json:"origin" validate:"required"`
 }
 
-func (s *Server) handleSend(w http.ResponseWriter, r *http.Request) {
+func (s *server) handleSend(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		return
@@ -158,32 +169,34 @@ func (s *Server) handleSend(w http.ResponseWriter, r *http.Request) {
 	w.Write(jsonx.MustMarshal(map[string]any{"status": "queued"}))
 }
 
-func (s *Server) client(identifier string) *Client {
+func (s *server) client(identifier string) *Client {
 	defer s.clientMutex.RUnlock()
 
 	s.clientMutex.RLock()
 	return s.clients[identifier]
 }
 
-func (s *Server) register(c *Client) {
+func (s *server) Register(c *Client) {
 	s.clientMutex.Lock()
 	s.clients[c.identifier] = c
 	s.clientMutex.Unlock()
 
+	s.wg.Add(1)
+
 	slog.Info("client registered", "identifier", c.identifier)
 }
 
-func (s *Server) unregister(c *Client) {
+func (s *server) Unregister(c *Client) {
 	s.clientMutex.Lock()
 	delete(s.clients, c.identifier)
 	s.clientMutex.Unlock()
 
+	s.wg.Done()
+
 	slog.Info("client unregistered", "identifier", c.identifier)
 }
 
-func (s *Server) eventReceived(c *Client, e Event) {
-	slog.Info("event received", "client", c.identifier, "type", e.Type())
-
+func (s *server) EventReceived(c *Client, e Event) {
 	switch typed := e.(type) {
 	case *msgInEvent:
 		notifyCourier(s.config, c, typed)

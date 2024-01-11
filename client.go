@@ -15,13 +15,13 @@ func newIdentifier() string {
 }
 
 type Client struct {
-	server      *Server
-	socket      *Socket
+	server      Server
+	socket      Socket
 	channelUUID uuids.UUID
 	identifier  string
 }
 
-func NewClient(s *Server, sock *Socket, channelUUID uuids.UUID, identifier string) *Client {
+func NewClient(s Server, sock Socket, channelUUID uuids.UUID, identifier string) *Client {
 	if identifier == "" {
 		identifier = newIdentifier()
 	}
@@ -33,13 +33,16 @@ func NewClient(s *Server, sock *Socket, channelUUID uuids.UUID, identifier strin
 		identifier:  identifier,
 	}
 
-	client.server.wg.Add(1)
 	client.socket.OnMessage(client.onMessage)
 	client.socket.OnClose(client.onClose)
 	client.socket.Start()
 
+	client.server.Register(client)
+
 	return client
 }
+
+func (c *Client) Identifier() string { return c.identifier }
 
 func (c *Client) onMessage(msg []byte) {
 	// for now only one type of event supported
@@ -47,12 +50,12 @@ func (c *Client) onMessage(msg []byte) {
 	if err := jsonx.Unmarshal(msg, evt); err != nil {
 		slog.Error("unable to unmarshal message", "client", c.identifier, "error", err)
 	} else {
-		c.server.eventReceived(c, evt)
+		c.server.EventReceived(c, evt)
 	}
 }
 
 func (c *Client) onClose(code int) {
-	c.server.unregister(c)
+	c.server.Unregister(c)
 }
 
 func (c *Client) Send(e Event) {
@@ -61,6 +64,4 @@ func (c *Client) Send(e Event) {
 
 func (c *Client) Stop() {
 	c.socket.Close()
-
-	c.server.wg.Done()
 }
