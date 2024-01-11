@@ -1,6 +1,7 @@
 package webchat
 
 import (
+	"net/http"
 	"sync"
 	"time"
 
@@ -11,10 +12,17 @@ const (
 	// max time for between reading a message before socket is considered closed
 	maxReadWait = 60 * time.Second
 
-	maxWriteWait = 10 * time.Second
+	// maximum time to wait for message to be written
+	maxWriteWait = 15 * time.Second
 
+	// how often to send a ping message
 	pingPeriod = 30 * time.Second
 )
+
+var upgrader = websocket.Upgrader{
+	ReadBufferSize:  1024,
+	WriteBufferSize: 1024,
+}
 
 type Socket interface {
 	Start()
@@ -39,11 +47,16 @@ type socket struct {
 	monitorWaitGroup sync.WaitGroup
 }
 
-func NewSocket(c *websocket.Conn, maxReadBytes int64, sendBuffer int) Socket {
-	c.SetReadLimit(maxReadBytes)
+func NewSocket(w http.ResponseWriter, r *http.Request, maxReadBytes int64, sendBuffer int) (Socket, error) {
+	conn, err := upgrader.Upgrade(w, r, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	conn.SetReadLimit(maxReadBytes)
 
 	return &socket{
-		conn:        c,
+		conn:        conn,
 		onMessage:   func([]byte) {},
 		onClose:     func(int) {},
 		outbox:      make(chan []byte, sendBuffer),
@@ -51,7 +64,7 @@ func NewSocket(c *websocket.Conn, maxReadBytes int64, sendBuffer int) Socket {
 		writeError:  make(chan error, 1),
 		stopWriter:  make(chan bool, 1),
 		stopMonitor: make(chan bool, 1),
-	}
+	}, nil
 }
 
 func (s *socket) OnMessage(fn func([]byte)) { s.onMessage = fn }

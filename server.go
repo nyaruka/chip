@@ -7,17 +7,11 @@ import (
 	"net/http"
 	"sync"
 
-	"github.com/gorilla/websocket"
 	"github.com/nyaruka/gocommon/jsonx"
 	"github.com/nyaruka/gocommon/urns"
 	"github.com/nyaruka/gocommon/uuids"
 	"golang.org/x/exp/maps"
 )
-
-var upgrader = websocket.Upgrader{
-	ReadBufferSize:  1024,
-	WriteBufferSize: 1024,
-}
 
 type Server interface {
 	Start() error
@@ -126,13 +120,11 @@ func (s *server) handleStart(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// hijack the HTTP connection...
-	conn, err := upgrader.Upgrade(w, r, nil)
+	sock, err := NewSocket(w, r, 4096, 10)
 	if err != nil {
 		writeErrorResponse(w, http.StatusInternalServerError, "error upgrading connection")
 		return
 	}
-
-	sock := NewSocket(conn, 4096, 10)
 
 	client := NewClient(s, sock, uuids.UUID(channelUUID), identifier)
 
