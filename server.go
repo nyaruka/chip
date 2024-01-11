@@ -11,6 +11,7 @@ import (
 	"github.com/nyaruka/gocommon/jsonx"
 	"github.com/nyaruka/gocommon/urns"
 	"github.com/nyaruka/gocommon/uuids"
+	"golang.org/x/exp/maps"
 )
 
 var upgrader = websocket.Upgrader{
@@ -21,7 +22,7 @@ var upgrader = websocket.Upgrader{
 type Server struct {
 	config     *Config
 	httpServer *http.Server
-	wg         *sync.WaitGroup
+	wg         sync.WaitGroup
 
 	clients     map[string]*Client
 	clientMutex *sync.RWMutex
@@ -33,7 +34,6 @@ func NewServer(cfg *Config) *Server {
 		httpServer: &http.Server{
 			Addr: fmt.Sprintf("%s:%d", cfg.Address, cfg.Port),
 		},
-		wg: &sync.WaitGroup{},
 
 		clients:     make(map[string]*Client),
 		clientMutex: &sync.RWMutex{},
@@ -65,11 +65,15 @@ func (s *Server) Start() error {
 func (s *Server) Stop() {
 	log := slog.With("comp", "server")
 
+	log.Info("stopping server...")
+
 	s.clientMutex.RLock()
-	for _, c := range s.clients {
+	clients := maps.Values(s.clients)
+	s.clientMutex.RUnlock()
+
+	for _, c := range clients {
 		c.Stop()
 	}
-	s.clientMutex.RUnlock()
 
 	// shut down our HTTP server
 	if err := s.httpServer.Shutdown(context.Background()); err != nil {
@@ -116,10 +120,12 @@ func (s *Server) handleStart(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	client := NewClient(s, conn, uuids.UUID(channelUUID), identifier)
+	socket := NewSocket(conn, 4096, 10)
+
+	client := NewClient(s, socket, uuids.UUID(channelUUID), identifier)
 	s.register(client)
 
-	client.Start()
+	client.Send(newChatStartedEvent(client.identifier))
 }
 
 type sendRequest struct {
