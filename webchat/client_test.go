@@ -3,7 +3,7 @@ package webchat_test
 import (
 	"testing"
 
-	"github.com/nyaruka/webchat"
+	"github.com/nyaruka/tembachat/webchat"
 	"github.com/stretchr/testify/assert"
 )
 

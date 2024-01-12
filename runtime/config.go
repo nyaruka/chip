@@ -1,4 +1,4 @@
-package webchat
+package runtime
 
 type Config struct {
 	Address     string `help:"the address to bind our web server to"`

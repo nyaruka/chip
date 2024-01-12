@@ -7,6 +7,6 @@ COPY go.mod go.sum ./
 RUN go mod download && go mod verify
 
 COPY . .
-RUN go build -v -o /usr/local/bin/app github.com/nyaruka/webchat/cmd/chatserver
+RUN go build -v -o /usr/local/bin/app github.com/nyaruka/tembachat/cmd/chatserver
 
 CMD ["app"]

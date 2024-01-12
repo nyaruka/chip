@@ -5,11 +5,12 @@ import (
 	"log/slog"
 	"os"
 	"os/signal"
-	"runtime"
+	goruntime "runtime"
 	"syscall"
 
 	"github.com/nyaruka/ezconf"
-	"github.com/nyaruka/webchat"
+	"github.com/nyaruka/tembachat/runtime"
+	"github.com/nyaruka/tembachat/webchat"
 )
 
 var (
@@ -19,7 +20,7 @@ var (
 )
 
 func main() {
-	config := webchat.NewDefaultConfig()
+	config := runtime.NewDefaultConfig()
 	config.Version = version
 	loader := ezconf.NewLoader(
 		config,
@@ -63,7 +64,7 @@ func handleSignals(cs webchat.Server) {
 		switch sig {
 		case syscall.SIGQUIT:
 			buf := make([]byte, 1<<20)
-			stacklen := runtime.Stack(buf, true)
+			stacklen := goruntime.Stack(buf, true)
 			log.Info("received quit signal, dumping stack")
 			ulog.Printf("\n%s", buf[:stacklen])
 		case syscall.SIGINT, syscall.SIGTERM:

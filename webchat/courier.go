@@ -8,6 +8,7 @@ import (
 
 	"github.com/nyaruka/gocommon/httpx"
 	"github.com/nyaruka/gocommon/jsonx"
+	"github.com/nyaruka/tembachat/runtime"
 )
 
 type courierMessage struct {
@@ -20,7 +21,7 @@ type courierPayload struct {
 	Message *courierMessage `json:"message"`
 }
 
-func notifyCourier(cfg *Config, c *Client, e *msgInEvent) {
+func notifyCourier(cfg *runtime.Config, c *Client, e *msgInEvent) {
 	courierBody := &courierPayload{
 		Type: "message",
 		Message: &courierMessage{

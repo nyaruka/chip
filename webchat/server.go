@@ -11,6 +11,7 @@ import (
 	"github.com/nyaruka/gocommon/jsonx"
 	"github.com/nyaruka/gocommon/urns"
 	"github.com/nyaruka/gocommon/uuids"
+	"github.com/nyaruka/tembachat/runtime"
 	"golang.org/x/exp/maps"
 )
 
@@ -25,7 +26,7 @@ type Server interface {
 }
 
 type server struct {
-	config     *Config
+	config     *runtime.Config
 	httpServer *http.Server
 	wg         sync.WaitGroup
 
@@ -33,7 +34,7 @@ type server struct {
 	clientMutex *sync.RWMutex
 }
 
-func NewServer(cfg *Config) Server {
+func NewServer(cfg *runtime.Config) Server {
 	return &server{
 		config: cfg,
 		httpServer: &http.Server{
@@ -90,7 +91,7 @@ func (s *server) Stop() {
 	s.wg.Wait()
 }
 
-func (s *server) Config() *Config { return s.config }
+func (s *server) Config() *runtime.Config { return s.config }
 
 func (s *server) handleIndex(w http.ResponseWriter, r *http.Request) {
 	s.clientMutex.RLock()
