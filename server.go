@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"sync"
 
+	"github.com/nyaruka/gocommon/httpx"
 	"github.com/nyaruka/gocommon/jsonx"
 	"github.com/nyaruka/gocommon/urns"
 	"github.com/nyaruka/gocommon/uuids"
@@ -120,7 +121,7 @@ func (s *server) handleStart(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// hijack the HTTP connection...
-	sock, err := NewSocket(w, r, 4096, 10)
+	sock, err := httpx.NewWebSocket(w, r, 4096, 10)
 	if err != nil {
 		writeErrorResponse(w, http.StatusInternalServerError, "error upgrading connection")
 		return

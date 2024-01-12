@@ -3,6 +3,7 @@ package webchat
 import (
 	"log/slog"
 
+	"github.com/nyaruka/gocommon/httpx"
 	"github.com/nyaruka/gocommon/jsonx"
 	"github.com/nyaruka/gocommon/random"
 	"github.com/nyaruka/gocommon/uuids"
@@ -16,12 +17,12 @@ func newIdentifier() string {
 
 type Client struct {
 	server      Server
-	socket      Socket
+	socket      httpx.WebSocket
 	channelUUID uuids.UUID
 	identifier  string
 }
 
-func NewClient(s Server, sock Socket, channelUUID uuids.UUID, identifier string) *Client {
+func NewClient(s Server, sock httpx.WebSocket, channelUUID uuids.UUID, identifier string) *Client {
 	if identifier == "" {
 		identifier = newIdentifier()
 	}
@@ -63,5 +64,5 @@ func (c *Client) Send(e Event) {
 }
 
 func (c *Client) Stop() {
-	c.socket.Close()
+	c.socket.Close(1000)
 }

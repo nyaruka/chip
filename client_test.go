@@ -31,8 +31,8 @@ type testSocket struct {
 
 func (s *testSocket) Start()          {}
 func (s *testSocket) Send(msg []byte) {}
-func (s *testSocket) Close() {
-	s.onClose(1000)
+func (s *testSocket) Close(code int) {
+	s.onClose(code)
 }
 
 func (s *testSocket) OnMessage(fn func([]byte)) { s.onMessage = fn }
