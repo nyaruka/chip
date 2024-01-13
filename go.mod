@@ -5,6 +5,7 @@ go 1.21
 require (
 	github.com/nyaruka/gocommon v1.51.1
 	github.com/stretchr/testify v1.8.4
+	github.com/gomodule/redigo v1.8.9
 )
 
 require (

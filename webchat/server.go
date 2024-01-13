@@ -27,6 +27,7 @@ type Server interface {
 
 type server struct {
 	config     *runtime.Config
+	rt         *runtime.Runtime
 	httpServer *http.Server
 	wg         sync.WaitGroup
 
