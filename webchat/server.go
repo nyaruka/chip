@@ -130,7 +130,9 @@ func (s *server) handleStart(w http.ResponseWriter, r *http.Request) {
 
 	client := NewClient(s, sock, uuids.UUID(channelUUID), identifier)
 
-	client.Send(newChatStartedEvent(client.identifier))
+	startedEvt := newChatStartedEvent(client.identifier)
+	client.Send(startedEvt)
+	notifyCourierChatStarted(s.config, client, startedEvt)
 }
 
 type sendRequest struct {
@@ -192,8 +194,10 @@ func (s *server) Unregister(c *Client) {
 
 func (s *server) EventReceived(c *Client, e Event) {
 	switch typed := e.(type) {
+	case *chatStartedEvent:
+		notifyCourierChatStarted(s.config, c, typed)
 	case *msgInEvent:
-		notifyCourier(s.config, c, typed)
+		notifyCourierMsgIn(s.config, c, typed)
 	}
 }
 
