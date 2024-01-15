@@ -160,24 +160,26 @@ func (s *server) client(identifier string) webchat.Client {
 	return s.clients[identifier]
 }
 
-func (s *server) Register(c webchat.Client) {
+func (s *server) Connect(c webchat.Client) {
 	s.clientMutex.Lock()
 	s.clients[c.Identifier()] = c
+	total := len(s.clients)
 	s.clientMutex.Unlock()
 
 	s.wg.Add(1)
 
-	slog.Info("client registered", "identifier", c.Identifier())
+	slog.Info("client connected", "identifier", c.Identifier(), "total", total)
 }
 
-func (s *server) Unregister(c webchat.Client) {
+func (s *server) Disconnect(c webchat.Client) {
 	s.clientMutex.Lock()
 	delete(s.clients, c.Identifier())
+	total := len(s.clients)
 	s.clientMutex.Unlock()
 
 	s.wg.Done()
 
-	slog.Info("client unregistered", "identifier", c.Identifier())
+	slog.Info("client disconnected", "identifier", c.Identifier(), "total", total)
 }
 
 func (s *server) NotifyCourier(c webchat.Client, e webchat.Event) {

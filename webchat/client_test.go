@@ -14,11 +14,11 @@ type testServer struct {
 func (s *testServer) Start() error { return nil }
 func (s *testServer) Stop()        {}
 
-func (s *testServer) Register(c webchat.Client) {
+func (s *testServer) Connect(c webchat.Client) {
 	s.clients[c.Identifier()] = c
 }
 
-func (s *testServer) Unregister(c webchat.Client) {
+func (s *testServer) Disconnect(c webchat.Client) {
 	delete(s.clients, c.Identifier())
 }
 

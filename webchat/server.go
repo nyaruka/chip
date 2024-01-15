@@ -4,8 +4,8 @@ type Server interface {
 	Start() error
 	Stop()
 
-	Register(Client)
-	Unregister(Client)
+	Connect(Client)
+	Disconnect(Client)
 
 	NotifyCourier(Client, Event)
 }

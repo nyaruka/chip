@@ -52,7 +52,7 @@ func NewClient(s Server, sock httpx.WebSocket, channel Channel, identifier strin
 	c.socket.OnClose(c.onClose)
 	c.socket.Start()
 
-	c.server.Register(c)
+	c.server.Connect(c)
 
 	go c.courierNotifier()
 
@@ -79,7 +79,7 @@ func (c *client) onMessage(msg []byte) {
 }
 
 func (c *client) onClose(code int) {
-	c.server.Unregister(c)
+	c.server.Disconnect(c)
 
 	c.courierStop <- true
 }
