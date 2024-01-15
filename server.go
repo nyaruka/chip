@@ -11,6 +11,7 @@ import (
 	"github.com/nyaruka/gocommon/jsonx"
 	"github.com/nyaruka/gocommon/urns"
 	"github.com/nyaruka/gocommon/uuids"
+	"github.com/nyaruka/tembachat/courier"
 	"github.com/nyaruka/tembachat/runtime"
 	"github.com/nyaruka/tembachat/webchat"
 	"golang.org/x/exp/maps"
@@ -23,10 +24,12 @@ type server struct {
 
 	clients     map[string]webchat.Client
 	clientMutex *sync.RWMutex
+
+	courier courier.Notifier
 }
 
 func NewServer(cfg *runtime.Config) webchat.Server {
-	return &server{
+	s := &server{
 		config: cfg,
 		httpServer: &http.Server{
 			Addr: fmt.Sprintf("%s:%d", cfg.Address, cfg.Port),
@@ -35,6 +38,9 @@ func NewServer(cfg *runtime.Config) webchat.Server {
 		clients:     make(map[string]webchat.Client),
 		clientMutex: &sync.RWMutex{},
 	}
+
+	s.courier = courier.NewNotifier(s, cfg.Courier, &s.wg)
+	return s
 }
 
 func (s *server) Start() error {
@@ -55,6 +61,8 @@ func (s *server) Start() error {
 		}
 	}()
 
+	s.courier.Start()
+
 	log.Info("server started")
 	return nil
 }
@@ -71,6 +79,8 @@ func (s *server) Stop() {
 	for _, c := range clients {
 		c.Stop()
 	}
+
+	s.courier.Stop()
 
 	// shut down our HTTP server
 	if err := s.httpServer.Shutdown(context.Background()); err != nil {
@@ -123,7 +133,8 @@ func (s *server) handleStart(w http.ResponseWriter, r *http.Request) {
 
 	startedEvt := webchat.NewChatStartedEvent(client.Identifier())
 	client.Send(startedEvt)
-	webchat.NotifyCourierChatStarted(s.config, client, startedEvt)
+
+	s.courier.Notify(client, startedEvt)
 }
 
 type sendRequest struct {
@@ -184,12 +195,7 @@ func (s *server) Unregister(c webchat.Client) {
 }
 
 func (s *server) EventReceived(c webchat.Client, e webchat.Event) {
-	switch typed := e.(type) {
-	case *webchat.ChatStartedEvent:
-		webchat.NotifyCourierChatStarted(s.config, c, typed)
-	case *webchat.MsgInEvent:
-		webchat.NotifyCourierMsgIn(s.config, c, typed)
-	}
+	s.courier.Notify(c, e)
 }
 
 func writeErrorResponse(w http.ResponseWriter, status int, msg string) {
