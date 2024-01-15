@@ -9,6 +9,7 @@ import (
 	"syscall"
 
 	"github.com/nyaruka/ezconf"
+	"github.com/nyaruka/tembachat"
 	"github.com/nyaruka/tembachat/runtime"
 	"github.com/nyaruka/tembachat/webchat"
 )
@@ -43,7 +44,7 @@ func main() {
 	logger := slog.With("comp", "main")
 	logger.Info("starting chatserver", "version", version, "released", date)
 
-	cs := webchat.NewServer(config)
+	cs := tembachat.NewServer(config)
 	if err := cs.Start(); err != nil {
 		logger.Error("unable to start server", "error", err)
 		os.Exit(1)

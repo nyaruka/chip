@@ -6,7 +6,6 @@ import (
 	"github.com/nyaruka/gocommon/httpx"
 	"github.com/nyaruka/gocommon/jsonx"
 	"github.com/nyaruka/gocommon/random"
-	"github.com/nyaruka/gocommon/uuids"
 )
 
 var identifierRunes = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789")
@@ -15,39 +14,48 @@ func newIdentifier() string {
 	return random.String(24, identifierRunes)
 }
 
-type Client struct {
-	server      Server
-	socket      httpx.WebSocket
-	channelUUID uuids.UUID
-	identifier  string
+type Client interface {
+	Channel() Channel
+	Identifier() string
+	Send(e Event)
+	Stop()
 }
 
-func NewClient(s Server, sock httpx.WebSocket, channelUUID uuids.UUID, identifier string) *Client {
+type client struct {
+	server     Server
+	socket     httpx.WebSocket
+	channel    Channel
+	identifier string
+}
+
+func NewClient(s Server, sock httpx.WebSocket, channel Channel, identifier string) Client {
 	if identifier == "" {
 		identifier = newIdentifier()
 	}
 
-	client := &Client{
-		server:      s,
-		socket:      sock,
-		channelUUID: channelUUID,
-		identifier:  identifier,
+	c := &client{
+		server:     s,
+		socket:     sock,
+		channel:    channel,
+		identifier: identifier,
 	}
 
-	client.socket.OnMessage(client.onMessage)
-	client.socket.OnClose(client.onClose)
-	client.socket.Start()
+	c.socket.OnMessage(c.onMessage)
+	c.socket.OnClose(c.onClose)
+	c.socket.Start()
 
-	client.server.Register(client)
+	c.server.Register(c)
 
-	return client
+	return c
 }
 
-func (c *Client) Identifier() string { return c.identifier }
+func (c *client) Identifier() string { return c.identifier }
 
-func (c *Client) onMessage(msg []byte) {
+func (c *client) Channel() Channel { return c.channel }
+
+func (c *client) onMessage(msg []byte) {
 	// for now only one type of event supported
-	evt := &msgInEvent{}
+	evt := &MsgInEvent{}
 	if err := jsonx.Unmarshal(msg, evt); err != nil {
 		slog.Error("unable to unmarshal message", "client", c.identifier, "error", err)
 	} else {
@@ -55,14 +63,14 @@ func (c *Client) onMessage(msg []byte) {
 	}
 }
 
-func (c *Client) onClose(code int) {
+func (c *client) onClose(code int) {
 	c.server.Unregister(c)
 }
 
-func (c *Client) Send(e Event) {
+func (c *client) Send(e Event) {
 	c.socket.Send(jsonx.MustMarshal(e))
 }
 
-func (c *Client) Stop() {
+func (c *client) Stop() {
 	c.socket.Close(1000)
 }

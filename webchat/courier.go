@@ -21,26 +21,26 @@ type courierMsg struct {
 	Text       string `json:"text"`
 }
 
-func notifyCourierChatStarted(cfg *runtime.Config, c *Client, e *chatStartedEvent) {
-	callCourier(cfg, c.channelUUID, &courierPayload{
-		Type: "chat_started",
-		Chat: &courierChat{
-			Identifier: c.identifier,
-		},
-	})
-}
-
 type courierPayload struct {
 	Type string       `json:"type"`
 	Chat *courierChat `json:"chat"`
 	Msg  *courierMsg  `json:"msg"`
 }
 
-func notifyCourierMsgIn(cfg *runtime.Config, c *Client, e *msgInEvent) {
-	callCourier(cfg, c.channelUUID, &courierPayload{
+func NotifyCourierChatStarted(cfg *runtime.Config, c Client, e *ChatStartedEvent) {
+	callCourier(cfg, c.Channel().UUID(), &courierPayload{
+		Type: "chat_started",
+		Chat: &courierChat{
+			Identifier: c.Identifier(),
+		},
+	})
+}
+
+func NotifyCourierMsgIn(cfg *runtime.Config, c Client, e *MsgInEvent) {
+	callCourier(cfg, c.Channel().UUID(), &courierPayload{
 		Type: "msg_in",
 		Msg: &courierMsg{
-			Identifier: c.identifier,
+			Identifier: c.Identifier(),
 			Text:       e.Text,
 		},
 	})
