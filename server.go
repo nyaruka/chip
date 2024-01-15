@@ -24,12 +24,10 @@ type server struct {
 
 	clients     map[string]webchat.Client
 	clientMutex *sync.RWMutex
-
-	courier courier.Notifier
 }
 
 func NewServer(cfg *runtime.Config) webchat.Server {
-	s := &server{
+	return &server{
 		config: cfg,
 		httpServer: &http.Server{
 			Addr: fmt.Sprintf("%s:%d", cfg.Address, cfg.Port),
@@ -38,9 +36,6 @@ func NewServer(cfg *runtime.Config) webchat.Server {
 		clients:     make(map[string]webchat.Client),
 		clientMutex: &sync.RWMutex{},
 	}
-
-	s.courier = courier.NewNotifier(s, cfg.Courier, &s.wg)
-	return s
 }
 
 func (s *server) Start() error {
@@ -61,8 +56,6 @@ func (s *server) Start() error {
 		}
 	}()
 
-	s.courier.Start()
-
 	log.Info("server started")
 	return nil
 }
@@ -79,8 +72,6 @@ func (s *server) Stop() {
 	for _, c := range clients {
 		c.Stop()
 	}
-
-	s.courier.Stop()
 
 	// shut down our HTTP server
 	if err := s.httpServer.Shutdown(context.Background()); err != nil {
@@ -129,12 +120,7 @@ func (s *server) handleStart(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	client := webchat.NewClient(s, sock, webchat.NewChannel(uuids.UUID(channelUUID)), identifier)
-
-	startedEvt := webchat.NewChatStartedEvent(client.Identifier())
-	client.Send(startedEvt)
-
-	s.courier.Notify(client, startedEvt)
+	webchat.NewClient(s, sock, webchat.NewChannel(uuids.UUID(channelUUID)), identifier)
 }
 
 type sendRequest struct {
@@ -194,8 +180,8 @@ func (s *server) Unregister(c webchat.Client) {
 	slog.Info("client unregistered", "identifier", c.Identifier())
 }
 
-func (s *server) EventReceived(c webchat.Client, e webchat.Event) {
-	s.courier.Notify(c, e)
+func (s *server) NotifyCourier(c webchat.Client, e webchat.Event) {
+	courier.Notify(s.config, c, e)
 }
 
 func writeErrorResponse(w http.ResponseWriter, status int, msg string) {

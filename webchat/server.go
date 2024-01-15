@@ -7,5 +7,5 @@ type Server interface {
 	Register(Client)
 	Unregister(Client)
 
-	EventReceived(Client, Event)
+	NotifyCourier(Client, Event)
 }

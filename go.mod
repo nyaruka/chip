@@ -3,7 +3,7 @@ module github.com/nyaruka/tembachat
 go 1.21
 
 require (
-	github.com/nyaruka/gocommon v1.51.1
+	github.com/nyaruka/gocommon v1.51.2
 	github.com/stretchr/testify v1.8.4
 )
 

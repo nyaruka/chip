@@ -22,7 +22,7 @@ func (s *testServer) Unregister(c webchat.Client) {
 	delete(s.clients, c.Identifier())
 }
 
-func (s *testServer) EventReceived(webchat.Client, webchat.Event) {}
+func (s *testServer) NotifyCourier(webchat.Client, webchat.Event) {}
 
 type testSocket struct {
 	onMessage func([]byte)

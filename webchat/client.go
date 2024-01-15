@@ -2,6 +2,7 @@ package webchat
 
 import (
 	"log/slog"
+	"sync"
 
 	"github.com/nyaruka/gocommon/httpx"
 	"github.com/nyaruka/gocommon/jsonx"
@@ -26,6 +27,10 @@ type client struct {
 	socket     httpx.WebSocket
 	channel    Channel
 	identifier string
+
+	courierQueue     chan Event
+	courierStop      chan bool
+	courierWaitGroup sync.WaitGroup
 }
 
 func NewClient(s Server, sock httpx.WebSocket, channel Channel, identifier string) Client {
@@ -38,6 +43,9 @@ func NewClient(s Server, sock httpx.WebSocket, channel Channel, identifier strin
 		socket:     sock,
 		channel:    channel,
 		identifier: identifier,
+
+		courierQueue: make(chan Event, 10),
+		courierStop:  make(chan bool),
 	}
 
 	c.socket.OnMessage(c.onMessage)
@@ -45,6 +53,13 @@ func NewClient(s Server, sock httpx.WebSocket, channel Channel, identifier strin
 	c.socket.Start()
 
 	c.server.Register(c)
+
+	go c.courierNotifier()
+
+	// create a chat_started event and send to both client and courier
+	started := NewChatStartedEvent(c.Identifier())
+	c.Send(started)
+	c.courierQueue <- started
 
 	return c
 }
@@ -59,12 +74,14 @@ func (c *client) onMessage(msg []byte) {
 	if err := jsonx.Unmarshal(msg, evt); err != nil {
 		slog.Error("unable to unmarshal message", "client", c.identifier, "error", err)
 	} else {
-		c.server.EventReceived(c, evt)
+		c.courierQueue <- evt
 	}
 }
 
 func (c *client) onClose(code int) {
 	c.server.Unregister(c)
+
+	c.courierStop <- true
 }
 
 func (c *client) Send(e Event) {
@@ -73,4 +90,20 @@ func (c *client) Send(e Event) {
 
 func (c *client) Stop() {
 	c.socket.Close(1000)
+
+	c.courierWaitGroup.Wait()
+}
+
+func (c *client) courierNotifier() {
+	c.courierWaitGroup.Add(1)
+	defer c.courierWaitGroup.Done()
+
+	for {
+		select {
+		case evt := <-c.courierQueue:
+			c.server.NotifyCourier(c, evt)
+		case <-c.courierStop:
+			return
+		}
+	}
 }
