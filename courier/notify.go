@@ -8,7 +8,6 @@ import (
 
 	"github.com/nyaruka/gocommon/httpx"
 	"github.com/nyaruka/gocommon/jsonx"
-	"github.com/nyaruka/gocommon/uuids"
 	"github.com/nyaruka/tembachat/runtime"
 	"github.com/nyaruka/tembachat/webchat"
 )
@@ -28,7 +27,7 @@ type courierPayload struct {
 	Msg  *courierMsg  `json:"msg"`
 }
 
-func notifyCourier(baseURL string, channelUUID uuids.UUID, payload *courierPayload) {
+func notifyCourier(baseURL string, channelUUID webchat.ChannelUUID, payload *courierPayload) {
 	url := fmt.Sprintf("%s/c/twc/%s/receive", baseURL, channelUUID)
 	request, _ := httpx.NewRequest("POST", url, bytes.NewReader(jsonx.MustMarshal(payload)), nil)
 

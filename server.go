@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"net/http"
 	"sync"
+	"time"
 
 	"github.com/nyaruka/gocommon/httpx"
 	"github.com/nyaruka/gocommon/jsonx"
@@ -112,9 +113,17 @@ func (s *server) handleIndex(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *server) handleStart(w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
 	channelUUID := r.URL.Query().Get("channel")
 	if !uuids.IsV4(channelUUID) {
 		writeErrorResponse(w, http.StatusBadRequest, "invalid channel UUID")
+		return
+	}
+	channel, err := webchat.GetChannel(ctx, s.rt, webchat.ChannelUUID(channelUUID))
+	if err != nil {
+		writeErrorResponse(w, http.StatusBadRequest, "no such channel")
 		return
 	}
 
@@ -135,7 +144,7 @@ func (s *server) handleStart(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	webchat.NewClient(s, sock, webchat.NewChannel(uuids.UUID(channelUUID)), identifier)
+	webchat.NewClient(s, sock, channel, identifier)
 }
 
 type sendRequest struct {
