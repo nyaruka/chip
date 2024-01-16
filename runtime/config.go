@@ -1,9 +1,11 @@
 package runtime
 
 import (
+	"log"
 	"log/slog"
 
 	"github.com/go-playground/validator/v10"
+	"github.com/nyaruka/ezconf"
 )
 
 type Config struct {
@@ -27,6 +29,19 @@ func NewDefaultConfig() *Config {
 		LogLevel: slog.LevelInfo,
 		Version:  "Dev",
 	}
+}
+
+func LoadConfig() *Config {
+	config := NewDefaultConfig()
+	loader := ezconf.NewLoader(config, "chatserver", "Temba Chat - webchat server", []string{"config.toml"})
+	loader.MustLoad()
+
+	// ensure config is valid
+	if err := config.Validate(); err != nil {
+		log.Fatalf("invalid config: %s", err)
+	}
+
+	return config
 }
 
 // Validate validates the config

@@ -11,7 +11,6 @@ import (
 
 	"github.com/getsentry/sentry-go"
 	_ "github.com/lib/pq"
-	"github.com/nyaruka/ezconf"
 	"github.com/nyaruka/tembachat"
 	"github.com/nyaruka/tembachat/runtime"
 	"github.com/nyaruka/tembachat/webchat"
@@ -26,15 +25,8 @@ var (
 )
 
 func main() {
-	config := runtime.NewDefaultConfig()
+	config := runtime.LoadConfig()
 	config.Version = version
-	loader := ezconf.NewLoader(config, "chatserver", "Temba Chat - webchat server", []string{"config.toml"})
-	loader.MustLoad()
-
-	// ensure config is valid
-	if err := config.Validate(); err != nil {
-		ulog.Fatalf("invalid config: %s", err)
-	}
 
 	// configure our logger
 	logHandler := slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: config.LogLevel})

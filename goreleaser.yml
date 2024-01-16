@@ -1,0 +1,19 @@
+build:
+  main: ./cmd/chatserver/main.go
+  binary: chatserver
+  goos:
+    - darwin
+    - linux
+  goarch:
+    - amd64
+    - arm64
+
+changelog:
+  filters:
+    exclude:
+      - "^Update CHANGELOG.md"
+
+archives:
+  - files:
+      - LICENSE
+      - README.md
