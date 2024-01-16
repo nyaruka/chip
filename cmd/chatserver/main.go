@@ -7,12 +7,16 @@ import (
 	"os/signal"
 	goruntime "runtime"
 	"syscall"
+	"time"
 
+	"github.com/getsentry/sentry-go"
 	_ "github.com/lib/pq"
 	"github.com/nyaruka/ezconf"
 	"github.com/nyaruka/tembachat"
 	"github.com/nyaruka/tembachat/runtime"
 	"github.com/nyaruka/tembachat/webchat"
+	slogmulti "github.com/samber/slog-multi"
+	slogsentry "github.com/samber/slog-sentry"
 )
 
 var (
@@ -29,20 +33,36 @@ func main() {
 
 	// ensure config is valid
 	if err := config.Validate(); err != nil {
-		slog.Error("invalid config", "error", err)
-		os.Exit(1)
+		ulog.Fatalf("invalid config: %s", err)
 	}
 
 	// configure our logger
 	logHandler := slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: config.LogLevel})
 	slog.SetDefault(slog.New(logHandler))
 
-	logger := slog.With("comp", "main")
-	logger.Info("starting chatserver", "version", version, "released", date)
+	// if we have a DSN entry, try to initialize it
+	if config.SentryDSN != "" {
+		err := sentry.Init(sentry.ClientOptions{Dsn: config.SentryDSN, EnableTracing: false})
+		if err != nil {
+			ulog.Fatalf("error initiating sentry client, error %s, dsn %s", err, config.SentryDSN)
+		}
+
+		defer sentry.Flush(2 * time.Second)
+
+		slog.SetDefault(slog.New(
+			slogmulti.Fanout(
+				logHandler,
+				slogsentry.Option{Level: slog.LevelError}.NewSentryHandler(),
+			),
+		))
+	}
+
+	log := slog.With("comp", "main")
+	log.Info("starting chatserver", "version", version, "released", date)
 
 	cs := tembachat.NewServer(config)
 	if err := cs.Start(); err != nil {
-		logger.Error("unable to start server", "error", err)
+		log.Error("unable to start server", "error", err)
 		os.Exit(1)
 	}
 

@@ -8,10 +8,13 @@ require (
 	github.com/stretchr/testify v1.8.4
 )
 
+require github.com/samber/lo v1.38.1 // indirect
+
 require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/fatih/structs v1.1.0 // indirect
 	github.com/gabriel-vasile/mimetype v1.4.3 // indirect
+	github.com/getsentry/sentry-go v0.26.0
 	github.com/go-chi/chi v4.1.2+incompatible // indirect
 	github.com/go-playground/locales v0.14.1 // indirect
 	github.com/go-playground/universal-translator v0.18.1 // indirect
@@ -29,6 +32,8 @@ require (
 	github.com/nyaruka/redisx v0.6.0
 	github.com/pkg/errors v0.9.1
 	github.com/pmezard/go-difflib v1.0.0 // indirect
+	github.com/samber/slog-multi v1.0.2
+	github.com/samber/slog-sentry v1.2.2
 	github.com/shopspring/decimal v1.3.1 // indirect
 	golang.org/x/crypto v0.18.0 // indirect
 	golang.org/x/exp v0.0.0-20240112132812-db7319d0e0e3
