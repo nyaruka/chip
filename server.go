@@ -11,14 +11,16 @@ import (
 	"github.com/nyaruka/gocommon/jsonx"
 	"github.com/nyaruka/gocommon/urns"
 	"github.com/nyaruka/gocommon/uuids"
+	"github.com/nyaruka/redisx"
 	"github.com/nyaruka/tembachat/courier"
 	"github.com/nyaruka/tembachat/runtime"
 	"github.com/nyaruka/tembachat/webchat"
+	"github.com/pkg/errors"
 	"golang.org/x/exp/maps"
 )
 
 type server struct {
-	config     *runtime.Config
+	rt         *runtime.Runtime
 	httpServer *http.Server
 	wg         sync.WaitGroup
 
@@ -28,7 +30,7 @@ type server struct {
 
 func NewServer(cfg *runtime.Config) webchat.Server {
 	return &server{
-		config: cfg,
+		rt: &runtime.Runtime{Config: cfg},
 		httpServer: &http.Server{
 			Addr: fmt.Sprintf("%s:%d", cfg.Address, cfg.Port),
 		},
@@ -39,7 +41,22 @@ func NewServer(cfg *runtime.Config) webchat.Server {
 }
 
 func (s *server) Start() error {
-	log := slog.With("comp", "server", "address", s.config.Address, "port", s.config.Port)
+	log := slog.With("comp", "server", "address", s.rt.Config.Address, "port", s.rt.Config.Port)
+	var err error
+
+	s.rt.DB, err = runtime.OpenDBPool(s.rt.Config.DB, 16)
+	if err != nil {
+		return errors.Wrapf(err, "error connecting to database")
+	} else {
+		log.Info("db ok")
+	}
+
+	s.rt.RP, err = redisx.NewPool(s.rt.Config.Redis)
+	if err != nil {
+		return errors.Wrapf(err, "error connecting to redis")
+	} else {
+		log.Info("redis ok")
+	}
 
 	http.HandleFunc("/", s.handleIndex)
 	http.HandleFunc("/start", s.handleStart)
@@ -82,8 +99,6 @@ func (s *server) Stop() {
 
 	s.wg.Wait()
 }
-
-func (s *server) Config() *runtime.Config { return s.config }
 
 func (s *server) handleIndex(w http.ResponseWriter, r *http.Request) {
 	s.clientMutex.RLock()
@@ -183,7 +198,7 @@ func (s *server) Disconnect(c webchat.Client) {
 }
 
 func (s *server) NotifyCourier(c webchat.Client, e webchat.Event) {
-	courier.Notify(s.config, c, e)
+	courier.Notify(s.rt.Config, c, e)
 }
 
 func writeErrorResponse(w http.ResponseWriter, status int, msg string) {

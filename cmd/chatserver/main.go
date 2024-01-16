@@ -8,6 +8,7 @@ import (
 	goruntime "runtime"
 	"syscall"
 
+	_ "github.com/lib/pq"
 	"github.com/nyaruka/ezconf"
 	"github.com/nyaruka/tembachat"
 	"github.com/nyaruka/tembachat/runtime"
@@ -25,6 +26,12 @@ func main() {
 	config.Version = version
 	loader := ezconf.NewLoader(config, "chatserver", "Temba Chat - webchat server", []string{"config.toml"})
 	loader.MustLoad()
+
+	// ensure config is valid
+	if err := config.Validate(); err != nil {
+		slog.Error("invalid config", "error", err)
+		os.Exit(1)
+	}
 
 	// configure our logger
 	logHandler := slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: config.LogLevel})
