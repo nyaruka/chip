@@ -23,22 +23,11 @@ var (
 func main() {
 	config := runtime.NewDefaultConfig()
 	config.Version = version
-	loader := ezconf.NewLoader(
-		config,
-		"chatserver", "Temba Chat - webchat server",
-		[]string{"config.toml"},
-	)
+	loader := ezconf.NewLoader(config, "chatserver", "Temba Chat - webchat server", []string{"config.toml"})
 	loader.MustLoad()
 
-	var level slog.Level
-	err := level.UnmarshalText([]byte(config.LogLevel))
-	if err != nil {
-		ulog.Fatalf("invalid log level %s", level)
-		os.Exit(1)
-	}
-
 	// configure our logger
-	logHandler := slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: level})
+	logHandler := slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: config.LogLevel})
 	slog.SetDefault(slog.New(logHandler))
 
 	logger := slog.With("comp", "main")
