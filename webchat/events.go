@@ -21,6 +21,15 @@ func NewChatStartedEvent(identifier string) *ChatStartedEvent {
 	return &ChatStartedEvent{baseEvent: baseEvent{Type_: "chat_started"}, Identifier: identifier}
 }
 
+type ChatResumedEvent struct {
+	baseEvent
+	Identifier string `json:"identifier"`
+}
+
+func NewChatResumedEvent(identifier string) *ChatResumedEvent {
+	return &ChatResumedEvent{baseEvent: baseEvent{Type_: "chat_resumed"}, Identifier: identifier}
+}
+
 type MsgOutEvent struct {
 	baseEvent
 	Text   string `json:"text"`

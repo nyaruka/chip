@@ -34,8 +34,10 @@ type client struct {
 }
 
 func NewClient(s Server, sock httpx.WebSocket, channel Channel, identifier string) Client {
+	isNew := false
 	if identifier == "" {
 		identifier = newIdentifier()
+		isNew = true
 	}
 
 	c := &client{
@@ -56,10 +58,15 @@ func NewClient(s Server, sock httpx.WebSocket, channel Channel, identifier strin
 
 	go c.courierNotifier()
 
-	// create a chat_started event and send to both client and courier
-	started := NewChatStartedEvent(c.Identifier())
-	c.Send(started)
-	c.courierQueue <- started
+	if isNew {
+		// create a chat_started event and send to both client and courier
+		evt := NewChatStartedEvent(c.Identifier())
+		c.Send(evt)
+		c.courierQueue <- evt
+	} else {
+		evt := NewChatResumedEvent(c.Identifier())
+		c.Send(evt)
+	}
 
 	return c
 }
