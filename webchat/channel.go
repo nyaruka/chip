@@ -9,28 +9,28 @@ import (
 	"github.com/pkg/errors"
 )
 
+type OrgID int
 type ChannelUUID uuids.UUID
 
 type Channel interface {
 	UUID() ChannelUUID
+	OrgID() OrgID
 	Config() map[string]any
 }
 
 type channel struct {
 	UUID_   ChannelUUID    `json:"uuid"`
+	OrgID_  OrgID          `json:"org_id"`
 	Config_ map[string]any `json:"config"`
 }
 
-func NewChannel(uuid ChannelUUID) Channel {
-	return &channel{UUID_: uuid}
-}
-
 func (c *channel) UUID() ChannelUUID      { return c.UUID_ }
+func (c *channel) OrgID() OrgID           { return c.OrgID_ }
 func (c *channel) Config() map[string]any { return c.Config_ }
 
 const sqlSelectChannel = `
 SELECT row_to_json(r) FROM (
-	SELECT uuid, config FROM channels_channel WHERE uuid = $1 AND channel_type = 'TWC' AND is_active
+	SELECT uuid, org_id, config FROM channels_channel WHERE uuid = $1 AND channel_type = 'TWC' AND is_active
 ) r`
 
 func LoadChannel(ctx context.Context, rt *runtime.Runtime, uuid ChannelUUID) (Channel, error) {

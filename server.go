@@ -129,10 +129,21 @@ func (s *server) handleStart(w http.ResponseWriter, r *http.Request) {
 
 	identifier := r.URL.Query().Get("identifier")
 	if identifier != "" {
-		_, err := urns.NewWebChatURN(identifier)
+		// if we're resuming from an existing identifier, check that it's valid...
+		urn, err := urns.NewWebChatURN(identifier)
 		if err != nil {
 			writeErrorResponse(w, http.StatusBadRequest, "invalid client identifier")
-			slog.Error("invalid client identifier", "error", err)
+			return
+		}
+
+		// and that it actually exists
+		exists, err := webchat.URNExists(ctx, s.rt, channel, urn)
+		if err != nil {
+			writeErrorResponse(w, http.StatusInternalServerError, "error checking identifier")
+			return
+		}
+		if !exists {
+			writeErrorResponse(w, http.StatusBadRequest, "invalid client identifier")
 			return
 		}
 	}

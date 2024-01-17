@@ -7,6 +7,14 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+type testChannel struct {
+	uuid webchat.ChannelUUID
+}
+
+func (c *testChannel) UUID() webchat.ChannelUUID { return c.uuid }
+func (c *testChannel) OrgID() webchat.OrgID      { return 0 }
+func (c *testChannel) Config() map[string]any    { return nil }
+
 type testServer struct {
 	clients map[string]webchat.Client
 }
@@ -41,7 +49,7 @@ func (s *testSocket) OnClose(fn func(int))      { s.onClose = fn }
 func TestClient(t *testing.T) {
 	svr := &testServer{clients: map[string]webchat.Client{}}
 	sock := &testSocket{}
-	ch := webchat.NewChannel("d991d239-e4bb-4a93-8c72-e6d093f7b0b8")
+	ch := &testChannel{uuid: "d991d239-e4bb-4a93-8c72-e6d093f7b0b8"}
 
 	client := webchat.NewClient(svr, sock, ch, "65vbbDAQCdPdEWlEhDGy4utO")
 
