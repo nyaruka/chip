@@ -45,3 +45,13 @@ func InsertURN(rt *runtime.Runtime, orgID webchat.OrgID, contactID webchat.Conta
 	must(row.Scan(&id))
 	return id
 }
+
+func InsertUser(rt *runtime.Runtime, email, firstName, lastName string) webchat.UserID {
+	row := rt.DB.QueryRow(
+		`INSERT INTO auth_user(email, first_name, last_name, is_active, is_staff) 
+		VALUES($1, $2, $3, TRUE, FALSE) RETURNING id`, email, firstName, lastName,
+	)
+	var id webchat.UserID
+	must(row.Scan(&id))
+	return id
+}

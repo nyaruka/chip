@@ -34,10 +34,11 @@ type MsgOutEvent struct {
 	baseEvent
 	Text   string `json:"text"`
 	Origin string `json:"origin"`
+	User   User   `json:"user,omitempty"`
 }
 
-func NewMsgOutEvent(text, origin string) *MsgOutEvent {
-	return &MsgOutEvent{baseEvent: baseEvent{Type_: "msg_out"}, Text: text, Origin: origin}
+func NewMsgOutEvent(text, origin string, user User) *MsgOutEvent {
+	return &MsgOutEvent{baseEvent: baseEvent{Type_: "msg_out"}, Text: text, Origin: origin, User: user}
 }
 
 type MsgInEvent struct {

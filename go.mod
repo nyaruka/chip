@@ -26,7 +26,7 @@ require (
 	github.com/naoina/go-stringutil v0.1.0 // indirect
 	github.com/naoina/toml v0.1.1 // indirect
 	github.com/nyaruka/ezconf v0.3.0
-	github.com/nyaruka/null/v2 v2.0.3 // indirect
+	github.com/nyaruka/null/v2 v2.0.3
 	github.com/nyaruka/phonenumbers v1.3.0 // indirect
 	github.com/nyaruka/redisx v0.6.0
 	github.com/pkg/errors v0.9.1

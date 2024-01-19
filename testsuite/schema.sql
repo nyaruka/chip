@@ -53,3 +53,13 @@ CREATE TABLE contacts_contacturn (
     auth_tokens jsonb,
     UNIQUE (org_id, identity)
 );
+
+DROP TABLE IF EXISTS auth_user CASCADE;
+CREATE TABLE auth_user (
+    id serial primary key,
+    email character varying(254) NOT NULL,
+    first_name character varying(150),
+    last_name character varying(150),
+    is_active boolean NOT NULL,
+    is_staff boolean NOT NULL
+);

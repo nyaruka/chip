@@ -159,12 +159,16 @@ func (s *server) handleStart(w http.ResponseWriter, r *http.Request) {
 }
 
 type sendRequest struct {
-	Identifier string `json:"identifier" validate:"required"`
-	Text       string `json:"text" validate:"required"`
-	Origin     string `json:"origin" validate:"required"`
+	Identifier string         `json:"identifier" validate:"required"`
+	Text       string         `json:"text" validate:"required"`
+	Origin     string         `json:"origin" validate:"required"`
+	UserID     webchat.UserID `json:"user_id"`
 }
 
 func (s *server) handleSend(w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
 	if r.Method != http.MethodPost {
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		return
@@ -183,7 +187,17 @@ func (s *server) handleSend(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	client.Send(webchat.NewMsgOutEvent(payload.Text, payload.Origin))
+	var user webchat.User
+	var err error
+	if payload.UserID != webchat.NilUserID {
+		user, err = webchat.LoadUser(ctx, s.rt, payload.UserID)
+		if err != nil {
+			writeErrorResponse(w, http.StatusNotFound, "no such user")
+			return
+		}
+	}
+
+	client.Send(webchat.NewMsgOutEvent(payload.Text, payload.Origin, user))
 
 	w.Write(jsonx.MustMarshal(map[string]any{"status": "queued"}))
 }
