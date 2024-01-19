@@ -34,7 +34,7 @@ SELECT row_to_json(r) FROM (
 ) r`
 
 func LoadChannel(ctx context.Context, rt *runtime.Runtime, uuid ChannelUUID) (Channel, error) {
-	rows, err := rt.DB.Query(sqlSelectChannel, uuid)
+	rows, err := rt.DB.QueryContext(ctx, sqlSelectChannel, uuid)
 	if err != nil {
 		return nil, errors.Wrap(err, "error querying channel")
 	}

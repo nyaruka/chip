@@ -46,7 +46,7 @@ SELECT row_to_json(r) FROM (
 ) r`
 
 func LoadUser(ctx context.Context, rt *runtime.Runtime, id UserID) (User, error) {
-	rows, err := rt.DB.Query(sqlSelectUser, id)
+	rows, err := rt.DB.QueryContext(ctx, sqlSelectUser, id)
 	if err != nil {
 		return nil, errors.Wrap(err, "error querying user")
 	}
