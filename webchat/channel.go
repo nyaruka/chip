@@ -38,6 +38,8 @@ func LoadChannel(ctx context.Context, rt *runtime.Runtime, uuid ChannelUUID) (Ch
 	if err != nil {
 		return nil, errors.Wrap(err, "error querying channel")
 	}
+	defer rows.Close()
+
 	if !rows.Next() {
 		return nil, errors.New("channel query returned no rows")
 	}

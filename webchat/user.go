@@ -50,6 +50,8 @@ func LoadUser(ctx context.Context, rt *runtime.Runtime, id UserID) (User, error)
 	if err != nil {
 		return nil, errors.Wrap(err, "error querying user")
 	}
+	defer rows.Close()
+
 	if !rows.Next() {
 		return nil, errors.New("user query returned no rows")
 	}

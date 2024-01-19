@@ -18,5 +18,7 @@ func URNExists(ctx context.Context, rt *runtime.Runtime, ch Channel, urn urns.UR
 	if err != nil {
 		return false, errors.Wrap(err, "error querying URN")
 	}
+	defer rows.Close()
+
 	return rows.Next(), nil
 }
