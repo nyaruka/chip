@@ -42,11 +42,11 @@ func (u *user) MarshalJSON() ([]byte, error) {
 
 const sqlSelectUser = `
 SELECT row_to_json(r) FROM (
-	SELECT id, email, first_name, last_name FROM auth_user WHERE id = $1 AND is_active
+	SELECT id, email, first_name, last_name FROM auth_user WHERE email = $1 AND is_active
 ) r`
 
-func LoadUser(ctx context.Context, rt *runtime.Runtime, id UserID) (User, error) {
-	rows, err := rt.DB.QueryContext(ctx, sqlSelectUser, id)
+func LoadUser(ctx context.Context, rt *runtime.Runtime, email string) (User, error) {
+	rows, err := rt.DB.QueryContext(ctx, sqlSelectUser, email)
 	if err != nil {
 		return nil, errors.Wrap(err, "error querying user")
 	}
@@ -62,8 +62,8 @@ func LoadUser(ctx context.Context, rt *runtime.Runtime, id UserID) (User, error)
 	return u, nil
 }
 
-func GetUser(ctx context.Context, rt *runtime.Runtime, id UserID) (User, error) {
+func GetUser(ctx context.Context, rt *runtime.Runtime, email string) (User, error) {
 	// TODO implement cache
 
-	return LoadUser(ctx, rt, id)
+	return LoadUser(ctx, rt, email)
 }
