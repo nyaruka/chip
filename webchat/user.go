@@ -61,9 +61,3 @@ func LoadUser(ctx context.Context, rt *runtime.Runtime, email string) (User, err
 	}
 	return u, nil
 }
-
-func GetUser(ctx context.Context, rt *runtime.Runtime, email string) (User, error) {
-	// TODO implement cache
-
-	return LoadUser(ctx, rt, email)
-}

@@ -49,9 +49,3 @@ func LoadChannel(ctx context.Context, rt *runtime.Runtime, uuid ChannelUUID) (Ch
 	}
 	return ch, nil
 }
-
-func GetChannel(ctx context.Context, rt *runtime.Runtime, uuid ChannelUUID) (Channel, error) {
-	// TODO implement cache
-
-	return LoadChannel(ctx, rt, uuid)
-}
