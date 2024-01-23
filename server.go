@@ -23,6 +23,7 @@ import (
 type server struct {
 	rt         *runtime.Runtime
 	httpServer *http.Server
+	store      Store
 	wg         sync.WaitGroup
 
 	clients     map[string]webchat.Client
@@ -30,11 +31,13 @@ type server struct {
 }
 
 func NewServer(cfg *runtime.Config) webchat.Server {
+	rt := &runtime.Runtime{Config: cfg}
 	return &server{
-		rt: &runtime.Runtime{Config: cfg},
+		rt: rt,
 		httpServer: &http.Server{
 			Addr: fmt.Sprintf("%s:%d", cfg.Address, cfg.Port),
 		},
+		store: NewStore(rt),
 
 		clients:     make(map[string]webchat.Client),
 		clientMutex: &sync.RWMutex{},
@@ -98,6 +101,8 @@ func (s *server) Stop() {
 		log.Info("http server stopped")
 	}
 
+	s.store.Close()
+
 	s.wg.Wait()
 }
 
@@ -121,7 +126,7 @@ func (s *server) handleStart(w http.ResponseWriter, r *http.Request) {
 		writeErrorResponse(w, http.StatusBadRequest, "invalid channel UUID")
 		return
 	}
-	channel, err := webchat.GetChannel(ctx, s.rt, webchat.ChannelUUID(channelUUID))
+	channel, err := s.store.GetChannel(ctx, webchat.ChannelUUID(channelUUID))
 	if err != nil {
 		writeErrorResponse(w, http.StatusBadRequest, "no such channel")
 		return
@@ -195,7 +200,7 @@ func (s *server) handleSend(w http.ResponseWriter, r *http.Request) {
 	var user webchat.User
 	var err error
 	if payload.User != nil {
-		user, err = webchat.GetUser(ctx, s.rt, payload.User.Email)
+		user, err = s.store.GetUser(ctx, payload.User.Email)
 		if err != nil {
 			writeErrorResponse(w, http.StatusNotFound, "no such user")
 			return
