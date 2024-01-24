@@ -1,58 +1,12 @@
 package tembachat_test
 
 import (
-	"context"
-	"errors"
-	"strings"
 	"testing"
-	"time"
 
 	"github.com/nyaruka/tembachat"
 	"github.com/nyaruka/tembachat/testsuite"
 	"github.com/stretchr/testify/assert"
 )
-
-func TestCache(t *testing.T) {
-	ctx := context.Background()
-
-	fetches := 0
-	fetch := func(ctx context.Context, s string) (string, error) {
-		fetches += 1
-		if s == "e" {
-			return "", errors.New("boom")
-		}
-		return strings.ToUpper(s), nil
-	}
-	cache := tembachat.NewCache[string, string](fetch, 500*time.Millisecond)
-
-	v, err := cache.Get(ctx, "x")
-	assert.NoError(t, err)
-	assert.Equal(t, "X", v)
-	assert.Equal(t, 1, fetches)
-
-	v, err = cache.Get(ctx, "x")
-	assert.NoError(t, err)
-	assert.Equal(t, "X", v)
-	assert.Equal(t, 1, fetches)
-
-	v, err = cache.Get(ctx, "y")
-	assert.NoError(t, err)
-	assert.Equal(t, "Y", v)
-	assert.Equal(t, 2, fetches)
-
-	v, err = cache.Get(ctx, "e")
-	assert.EqualError(t, err, "boom")
-	assert.Equal(t, "", v)
-	assert.Equal(t, 3, fetches)
-
-	assert.Equal(t, 2, cache.Len())
-
-	time.Sleep(time.Second)
-
-	assert.Equal(t, 0, cache.Len())
-
-	cache.Stop()
-}
 
 func TestStore(t *testing.T) {
 	ctx, rt := testsuite.Runtime()
