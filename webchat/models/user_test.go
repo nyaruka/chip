@@ -1,11 +1,11 @@
-package webchat_test
+package models_test
 
 import (
 	"testing"
 
 	"github.com/nyaruka/gocommon/jsonx"
 	"github.com/nyaruka/tembachat/testsuite"
-	"github.com/nyaruka/tembachat/webchat"
+	"github.com/nyaruka/tembachat/webchat/models"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -16,10 +16,10 @@ func TestLoadUser(t *testing.T) {
 
 	bobID := testsuite.InsertUser(rt, "bob@nyaruka.com", "Bob", "McFlows")
 
-	_, err := webchat.LoadUser(ctx, rt, 1234567)
+	_, err := models.LoadUser(ctx, rt, 1234567)
 	assert.EqualError(t, err, "user query returned no rows")
 
-	u, err := webchat.LoadUser(ctx, rt, bobID)
+	u, err := models.LoadUser(ctx, rt, bobID)
 	assert.NoError(t, err)
 	assert.Equal(t, bobID, u.ID())
 	assert.Equal(t, "bob@nyaruka.com", u.Email())

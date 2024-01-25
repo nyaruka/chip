@@ -6,42 +6,42 @@ import (
 
 	"github.com/nyaruka/gocommon/cache"
 	"github.com/nyaruka/tembachat/runtime"
-	"github.com/nyaruka/tembachat/webchat"
+	"github.com/nyaruka/tembachat/webchat/models"
 )
 
 type Store interface {
-	GetChannel(context.Context, webchat.ChannelUUID) (webchat.Channel, error)
-	GetUser(context.Context, webchat.UserID) (webchat.User, error)
+	GetChannel(context.Context, models.ChannelUUID) (models.Channel, error)
+	GetUser(context.Context, models.UserID) (models.User, error)
 	Close()
 }
 
 // implementation of Store using cached database lookups
 type store struct {
 	rt       *runtime.Runtime
-	channels *cache.Local[webchat.ChannelUUID, webchat.Channel]
-	users    *cache.Local[webchat.UserID, webchat.User]
+	channels *cache.Local[models.ChannelUUID, models.Channel]
+	users    *cache.Local[models.UserID, models.User]
 }
 
 func NewStore(rt *runtime.Runtime) Store {
-	fetchChannel := func(ctx context.Context, uuid webchat.ChannelUUID) (webchat.Channel, error) {
-		return webchat.LoadChannel(ctx, rt, uuid)
+	fetchChannel := func(ctx context.Context, uuid models.ChannelUUID) (models.Channel, error) {
+		return models.LoadChannel(ctx, rt, uuid)
 	}
-	fetchUser := func(ctx context.Context, id webchat.UserID) (webchat.User, error) {
-		return webchat.LoadUser(ctx, rt, id)
+	fetchUser := func(ctx context.Context, id models.UserID) (models.User, error) {
+		return models.LoadUser(ctx, rt, id)
 	}
 
 	return &store{
 		rt:       rt,
-		channels: cache.NewLocal[webchat.ChannelUUID, webchat.Channel](fetchChannel, 30*time.Second),
-		users:    cache.NewLocal[webchat.UserID, webchat.User](fetchUser, 30*time.Second),
+		channels: cache.NewLocal[models.ChannelUUID, models.Channel](fetchChannel, 30*time.Second),
+		users:    cache.NewLocal[models.UserID, models.User](fetchUser, 30*time.Second),
 	}
 }
 
-func (s *store) GetChannel(ctx context.Context, uuid webchat.ChannelUUID) (webchat.Channel, error) {
+func (s *store) GetChannel(ctx context.Context, uuid models.ChannelUUID) (models.Channel, error) {
 	return s.channels.GetOrFetch(ctx, uuid)
 }
 
-func (s *store) GetUser(ctx context.Context, id webchat.UserID) (webchat.User, error) {
+func (s *store) GetUser(ctx context.Context, id models.UserID) (models.User, error) {
 	return s.users.GetOrFetch(ctx, id)
 }
 

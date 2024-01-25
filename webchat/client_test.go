@@ -4,16 +4,18 @@ import (
 	"testing"
 
 	"github.com/nyaruka/tembachat/webchat"
+	"github.com/nyaruka/tembachat/webchat/events"
+	"github.com/nyaruka/tembachat/webchat/models"
 	"github.com/stretchr/testify/assert"
 )
 
 type testChannel struct {
-	uuid webchat.ChannelUUID
+	uuid models.ChannelUUID
 }
 
-func (c *testChannel) UUID() webchat.ChannelUUID { return c.uuid }
-func (c *testChannel) OrgID() webchat.OrgID      { return 0 }
-func (c *testChannel) Config() map[string]any    { return nil }
+func (c *testChannel) UUID() models.ChannelUUID { return c.uuid }
+func (c *testChannel) OrgID() models.OrgID      { return 0 }
+func (c *testChannel) Config() map[string]any   { return nil }
 
 type testServer struct {
 	clients map[string]webchat.Client
@@ -30,7 +32,7 @@ func (s *testServer) Disconnect(c webchat.Client) {
 	delete(s.clients, c.Identifier())
 }
 
-func (s *testServer) NotifyCourier(webchat.Client, webchat.Event) {}
+func (s *testServer) NotifyCourier(webchat.Client, events.Event) {}
 
 type testSocket struct {
 	onMessage func([]byte)

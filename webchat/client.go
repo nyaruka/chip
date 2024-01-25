@@ -7,6 +7,8 @@ import (
 	"github.com/nyaruka/gocommon/httpx"
 	"github.com/nyaruka/gocommon/jsonx"
 	"github.com/nyaruka/gocommon/random"
+	"github.com/nyaruka/tembachat/webchat/events"
+	"github.com/nyaruka/tembachat/webchat/models"
 )
 
 var identifierRunes = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789")
@@ -16,24 +18,24 @@ func newIdentifier() string {
 }
 
 type Client interface {
-	Channel() Channel
+	Channel() models.Channel
 	Identifier() string
-	Send(e Event)
+	Send(e events.Event)
 	Stop()
 }
 
 type client struct {
 	server     Server
 	socket     httpx.WebSocket
-	channel    Channel
+	channel    models.Channel
 	identifier string
 
-	courierQueue     chan Event
+	courierQueue     chan events.Event
 	courierStop      chan bool
 	courierWaitGroup sync.WaitGroup
 }
 
-func NewClient(s Server, sock httpx.WebSocket, channel Channel, identifier string) Client {
+func NewClient(s Server, sock httpx.WebSocket, channel models.Channel, identifier string) Client {
 	isNew := false
 	if identifier == "" {
 		identifier = newIdentifier()
@@ -46,7 +48,7 @@ func NewClient(s Server, sock httpx.WebSocket, channel Channel, identifier strin
 		channel:    channel,
 		identifier: identifier,
 
-		courierQueue: make(chan Event, 10),
+		courierQueue: make(chan events.Event, 10),
 		courierStop:  make(chan bool),
 	}
 
@@ -60,11 +62,11 @@ func NewClient(s Server, sock httpx.WebSocket, channel Channel, identifier strin
 
 	if isNew {
 		// create a chat_started event and send to both client and courier
-		evt := NewChatStartedEvent(c.Identifier())
+		evt := events.NewChatStarted(c.Identifier())
 		c.Send(evt)
 		c.courierQueue <- evt
 	} else {
-		evt := NewChatResumedEvent(c.Identifier())
+		evt := events.NewChatResumed(c.Identifier())
 		c.Send(evt)
 	}
 
@@ -73,11 +75,11 @@ func NewClient(s Server, sock httpx.WebSocket, channel Channel, identifier strin
 
 func (c *client) Identifier() string { return c.identifier }
 
-func (c *client) Channel() Channel { return c.channel }
+func (c *client) Channel() models.Channel { return c.channel }
 
 func (c *client) onMessage(msg []byte) {
 	// for now only one type of event supported
-	evt := &MsgInEvent{}
+	evt := &events.MsgIn{}
 	if err := jsonx.Unmarshal(msg, evt); err != nil {
 		slog.Error("unable to unmarshal message", "client", c.identifier, "error", err)
 	} else {
@@ -91,7 +93,7 @@ func (c *client) onClose(code int) {
 	c.courierStop <- true
 }
 
-func (c *client) Send(e Event) {
+func (c *client) Send(e events.Event) {
 	c.socket.Send(jsonx.MustMarshal(e))
 }
 

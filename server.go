@@ -16,6 +16,8 @@ import (
 	"github.com/nyaruka/tembachat/courier"
 	"github.com/nyaruka/tembachat/runtime"
 	"github.com/nyaruka/tembachat/webchat"
+	"github.com/nyaruka/tembachat/webchat/events"
+	"github.com/nyaruka/tembachat/webchat/models"
 	"github.com/pkg/errors"
 	"golang.org/x/exp/maps"
 )
@@ -126,7 +128,7 @@ func (s *server) handleStart(w http.ResponseWriter, r *http.Request) {
 		writeErrorResponse(w, http.StatusBadRequest, "invalid channel UUID")
 		return
 	}
-	channel, err := s.store.GetChannel(ctx, webchat.ChannelUUID(channelUUID))
+	channel, err := s.store.GetChannel(ctx, models.ChannelUUID(channelUUID))
 	if err != nil {
 		writeErrorResponse(w, http.StatusBadRequest, "no such channel")
 		return
@@ -142,7 +144,7 @@ func (s *server) handleStart(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// and that it actually exists
-		exists, err := webchat.URNExists(ctx, s.rt, channel, urn)
+		exists, err := models.URNExists(ctx, s.rt, channel, urn)
 		if err != nil {
 			writeErrorResponse(w, http.StatusInternalServerError, "error checking identifier")
 			return
@@ -164,10 +166,10 @@ func (s *server) handleStart(w http.ResponseWriter, r *http.Request) {
 }
 
 type sendRequest struct {
-	Identifier string         `json:"identifier" validate:"required"`
-	Text       string         `json:"text" validate:"required"`
-	Origin     string         `json:"origin" validate:"required"`
-	UserID     webchat.UserID `json:"user_id"`
+	Identifier string        `json:"identifier" validate:"required"`
+	Text       string        `json:"text" validate:"required"`
+	Origin     string        `json:"origin" validate:"required"`
+	UserID     models.UserID `json:"user_id"`
 }
 
 func (s *server) handleSend(w http.ResponseWriter, r *http.Request) {
@@ -192,9 +194,9 @@ func (s *server) handleSend(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var user webchat.User
+	var user models.User
 	var err error
-	if payload.UserID != webchat.NilUserID {
+	if payload.UserID != models.NilUserID {
 		user, err = s.store.GetUser(ctx, payload.UserID)
 		if err != nil {
 			writeErrorResponse(w, http.StatusNotFound, "no such user")
@@ -202,7 +204,7 @@ func (s *server) handleSend(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	client.Send(webchat.NewMsgOutEvent(payload.Text, payload.Origin, user))
+	client.Send(events.NewMsgOut(payload.Text, payload.Origin, user))
 
 	w.Write(jsonx.MustMarshal(map[string]any{"status": "queued"}))
 }
@@ -236,7 +238,7 @@ func (s *server) Disconnect(c webchat.Client) {
 	slog.Info("client disconnected", "identifier", c.Identifier(), "total", total)
 }
 
-func (s *server) NotifyCourier(c webchat.Client, e webchat.Event) {
+func (s *server) NotifyCourier(c webchat.Client, e events.Event) {
 	courier.Notify(s.rt.Config, c, e)
 }
 

@@ -1,5 +1,7 @@
 package webchat
 
+import "github.com/nyaruka/tembachat/webchat/events"
+
 type Server interface {
 	Start() error
 	Stop()
@@ -7,5 +9,5 @@ type Server interface {
 	Connect(Client)
 	Disconnect(Client)
 
-	NotifyCourier(Client, Event)
+	NotifyCourier(Client, events.Event)
 }
