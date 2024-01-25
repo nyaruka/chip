@@ -1,4 +1,4 @@
-package webchat
+package web
 
 import (
 	"log/slog"
@@ -7,8 +7,8 @@ import (
 	"github.com/nyaruka/gocommon/httpx"
 	"github.com/nyaruka/gocommon/jsonx"
 	"github.com/nyaruka/gocommon/random"
-	"github.com/nyaruka/tembachat/webchat/events"
-	"github.com/nyaruka/tembachat/webchat/models"
+	"github.com/nyaruka/tembachat/core/events"
+	"github.com/nyaruka/tembachat/core/models"
 )
 
 var identifierRunes = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789")

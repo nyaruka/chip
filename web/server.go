@@ -1,6 +1,6 @@
-package webchat
+package web
 
-import "github.com/nyaruka/tembachat/webchat/events"
+import "github.com/nyaruka/tembachat/core/events"
 
 type Server interface {
 	Start() error

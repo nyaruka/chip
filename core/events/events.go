@@ -1,6 +1,6 @@
 package events
 
-import "github.com/nyaruka/tembachat/webchat/models"
+import "github.com/nyaruka/tembachat/core/models"
 
 type Event interface {
 	Type() string

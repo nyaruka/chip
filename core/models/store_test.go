@@ -1,9 +1,9 @@
-package tembachat_test
+package models_test
 
 import (
 	"testing"
 
-	"github.com/nyaruka/tembachat"
+	"github.com/nyaruka/tembachat/core/models"
 	"github.com/nyaruka/tembachat/testsuite"
 	"github.com/stretchr/testify/assert"
 )
@@ -13,7 +13,7 @@ func TestStore(t *testing.T) {
 
 	defer testsuite.ResetDB()
 
-	store := tembachat.NewStore(rt)
+	store := models.NewStore(rt)
 
 	orgID := testsuite.InsertOrg(rt, "Nyaruka")
 	twcUUID := testsuite.InsertChannel(rt, orgID, "TWC", "WebChat", "123", []string{"webchat"})

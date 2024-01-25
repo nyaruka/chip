@@ -4,8 +4,8 @@ import (
 	"github.com/lib/pq"
 	"github.com/nyaruka/gocommon/urns"
 	"github.com/nyaruka/gocommon/uuids"
+	"github.com/nyaruka/tembachat/core/models"
 	"github.com/nyaruka/tembachat/runtime"
-	"github.com/nyaruka/tembachat/webchat/models"
 )
 
 func InsertOrg(rt *runtime.Runtime, name string) models.OrgID {

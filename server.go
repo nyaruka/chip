@@ -13,11 +13,11 @@ import (
 	"github.com/nyaruka/gocommon/urns"
 	"github.com/nyaruka/gocommon/uuids"
 	"github.com/nyaruka/redisx"
+	"github.com/nyaruka/tembachat/core/events"
+	"github.com/nyaruka/tembachat/core/models"
 	"github.com/nyaruka/tembachat/courier"
 	"github.com/nyaruka/tembachat/runtime"
-	"github.com/nyaruka/tembachat/webchat"
-	"github.com/nyaruka/tembachat/webchat/events"
-	"github.com/nyaruka/tembachat/webchat/models"
+	"github.com/nyaruka/tembachat/web"
 	"github.com/pkg/errors"
 	"golang.org/x/exp/maps"
 )
@@ -25,23 +25,23 @@ import (
 type server struct {
 	rt         *runtime.Runtime
 	httpServer *http.Server
-	store      Store
+	store      models.Store
 	wg         sync.WaitGroup
 
-	clients     map[string]webchat.Client
+	clients     map[string]web.Client
 	clientMutex *sync.RWMutex
 }
 
-func NewServer(cfg *runtime.Config) webchat.Server {
+func NewServer(cfg *runtime.Config) web.Server {
 	rt := &runtime.Runtime{Config: cfg}
 	return &server{
 		rt: rt,
 		httpServer: &http.Server{
 			Addr: fmt.Sprintf("%s:%d", cfg.Address, cfg.Port),
 		},
-		store: NewStore(rt),
+		store: models.NewStore(rt),
 
-		clients:     make(map[string]webchat.Client),
+		clients:     make(map[string]web.Client),
 		clientMutex: &sync.RWMutex{},
 	}
 }
@@ -162,7 +162,7 @@ func (s *server) handleStart(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	webchat.NewClient(s, sock, channel, identifier)
+	web.NewClient(s, sock, channel, identifier)
 }
 
 type sendRequest struct {
@@ -209,14 +209,14 @@ func (s *server) handleSend(w http.ResponseWriter, r *http.Request) {
 	w.Write(jsonx.MustMarshal(map[string]any{"status": "queued"}))
 }
 
-func (s *server) client(identifier string) webchat.Client {
+func (s *server) client(identifier string) web.Client {
 	defer s.clientMutex.RUnlock()
 
 	s.clientMutex.RLock()
 	return s.clients[identifier]
 }
 
-func (s *server) Connect(c webchat.Client) {
+func (s *server) Connect(c web.Client) {
 	s.clientMutex.Lock()
 	s.clients[c.Identifier()] = c
 	total := len(s.clients)
@@ -227,7 +227,7 @@ func (s *server) Connect(c webchat.Client) {
 	slog.Info("client connected", "identifier", c.Identifier(), "total", total)
 }
 
-func (s *server) Disconnect(c webchat.Client) {
+func (s *server) Disconnect(c web.Client) {
 	s.clientMutex.Lock()
 	delete(s.clients, c.Identifier())
 	total := len(s.clients)
@@ -238,7 +238,7 @@ func (s *server) Disconnect(c webchat.Client) {
 	slog.Info("client disconnected", "identifier", c.Identifier(), "total", total)
 }
 
-func (s *server) NotifyCourier(c webchat.Client, e events.Event) {
+func (s *server) NotifyCourier(c web.Client, e events.Event) {
 	courier.Notify(s.rt.Config, c, e)
 }
 

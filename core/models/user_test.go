@@ -4,8 +4,8 @@ import (
 	"testing"
 
 	"github.com/nyaruka/gocommon/jsonx"
+	"github.com/nyaruka/tembachat/core/models"
 	"github.com/nyaruka/tembachat/testsuite"
-	"github.com/nyaruka/tembachat/webchat/models"
 	"github.com/stretchr/testify/assert"
 )
 

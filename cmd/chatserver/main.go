@@ -13,7 +13,7 @@ import (
 	_ "github.com/lib/pq"
 	"github.com/nyaruka/tembachat"
 	"github.com/nyaruka/tembachat/runtime"
-	"github.com/nyaruka/tembachat/webchat"
+	"github.com/nyaruka/tembachat/web"
 	slogmulti "github.com/samber/slog-multi"
 	slogsentry "github.com/samber/slog-sentry"
 )
@@ -62,7 +62,7 @@ func main() {
 }
 
 // handleSignals takes care of trapping quit, interrupt or terminate signals and doing the right thing
-func handleSignals(cs webchat.Server) {
+func handleSignals(cs web.Server) {
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
 
