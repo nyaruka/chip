@@ -13,7 +13,6 @@ import (
 	_ "github.com/lib/pq"
 	"github.com/nyaruka/tembachat"
 	"github.com/nyaruka/tembachat/runtime"
-	"github.com/nyaruka/tembachat/web"
 	slogmulti "github.com/samber/slog-multi"
 	slogsentry "github.com/samber/slog-sentry"
 )
@@ -50,19 +49,19 @@ func main() {
 	}
 
 	log := slog.With("comp", "main")
-	log.Info("starting chatserver", "version", version, "released", date)
+	log.Info("starting...", "version", version, "released", date)
 
-	cs := tembachat.NewServer(config)
-	if err := cs.Start(); err != nil {
-		log.Error("unable to start server", "error", err)
+	svc := tembachat.NewService(config)
+	if err := svc.Start(); err != nil {
+		log.Error("unable to start", "error", err)
 		os.Exit(1)
 	}
 
-	handleSignals(cs) // handle our signals
+	handleSignals(svc) // handle our signals
 }
 
 // handleSignals takes care of trapping quit, interrupt or terminate signals and doing the right thing
-func handleSignals(cs web.Server) {
+func handleSignals(svc *tembachat.Service) {
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
 
@@ -78,7 +77,7 @@ func handleSignals(cs web.Server) {
 			ulog.Printf("\n%s", buf[:stacklen])
 		case syscall.SIGINT, syscall.SIGTERM:
 			log.Info("received exit signal, exiting")
-			cs.Stop()
+			svc.Stop()
 			return
 		}
 	}

@@ -11,7 +11,6 @@ import (
 	"github.com/nyaruka/tembachat/core/events"
 	"github.com/nyaruka/tembachat/core/models"
 	"github.com/nyaruka/tembachat/runtime"
-	"github.com/nyaruka/tembachat/web"
 )
 
 type courierChat struct {
@@ -41,21 +40,21 @@ func notifyCourier(baseURL string, channelUUID models.ChannelUUID, payload *cour
 	}
 }
 
-func Notify(cfg *runtime.Config, c web.Client, e events.Event) {
+func Notify(cfg *runtime.Config, c models.Channel, identifier string, e events.Event) {
 	switch typed := e.(type) {
 	case *events.ChatStarted:
-		notifyCourier(cfg.Courier, c.Channel().UUID(), &courierPayload{
+		notifyCourier(cfg.Courier, c.UUID(), &courierPayload{
 			Type: "chat_started",
 			Chat: &courierChat{
-				Identifier: c.Identifier(),
+				Identifier: identifier,
 			},
 		})
 
 	case *events.MsgIn:
-		notifyCourier(cfg.Courier, c.Channel().UUID(), &courierPayload{
+		notifyCourier(cfg.Courier, c.UUID(), &courierPayload{
 			Type: "msg_in",
 			Msg: &courierMsg{
-				Identifier: c.Identifier(),
+				Identifier: identifier,
 				Text:       typed.Text,
 			},
 		})

@@ -17,15 +17,8 @@ func newIdentifier() string {
 	return random.String(24, identifierRunes)
 }
 
-type Client interface {
-	Channel() models.Channel
-	Identifier() string
-	Send(e events.Event)
-	Stop()
-}
-
-type client struct {
-	server     Server
+type Client struct {
+	server     *Server
 	socket     httpx.WebSocket
 	channel    models.Channel
 	identifier string
@@ -35,14 +28,14 @@ type client struct {
 	courierWaitGroup sync.WaitGroup
 }
 
-func NewClient(s Server, sock httpx.WebSocket, channel models.Channel, identifier string) Client {
+func NewClient(s *Server, sock httpx.WebSocket, channel models.Channel, identifier string) *Client {
 	isNew := false
 	if identifier == "" {
 		identifier = newIdentifier()
 		isNew = true
 	}
 
-	c := &client{
+	c := &Client{
 		server:     s,
 		socket:     sock,
 		channel:    channel,
@@ -73,11 +66,11 @@ func NewClient(s Server, sock httpx.WebSocket, channel models.Channel, identifie
 	return c
 }
 
-func (c *client) Identifier() string { return c.identifier }
+func (c *Client) Identifier() string { return c.identifier }
 
-func (c *client) Channel() models.Channel { return c.channel }
+func (c *Client) Channel() models.Channel { return c.channel }
 
-func (c *client) onMessage(msg []byte) {
+func (c *Client) onMessage(msg []byte) {
 	// for now only one type of event supported
 	evt := &events.MsgIn{}
 	if err := jsonx.Unmarshal(msg, evt); err != nil {
@@ -87,23 +80,23 @@ func (c *client) onMessage(msg []byte) {
 	}
 }
 
-func (c *client) onClose(code int) {
+func (c *Client) onClose(code int) {
 	c.server.Disconnect(c)
 
 	c.courierStop <- true
 }
 
-func (c *client) Send(e events.Event) {
+func (c *Client) Send(e events.Event) {
 	c.socket.Send(jsonx.MustMarshal(e))
 }
 
-func (c *client) Stop() {
+func (c *Client) Stop() {
 	c.socket.Close(1000)
 
 	c.courierWaitGroup.Wait()
 }
 
-func (c *client) courierNotifier() {
+func (c *Client) courierNotifier() {
 	c.courierWaitGroup.Add(1)
 	defer c.courierWaitGroup.Done()
 
