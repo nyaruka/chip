@@ -163,16 +163,11 @@ func (s *server) handleStart(w http.ResponseWriter, r *http.Request) {
 	webchat.NewClient(s, sock, channel, identifier)
 }
 
-type userRef struct {
-	Email string `json:"email"`
-	Name  string `json:"name"`
-}
-
 type sendRequest struct {
-	Identifier string   `json:"identifier" validate:"required"`
-	Text       string   `json:"text" validate:"required"`
-	Origin     string   `json:"origin" validate:"required"`
-	User       *userRef `json:"user"`
+	Identifier string         `json:"identifier" validate:"required"`
+	Text       string         `json:"text" validate:"required"`
+	Origin     string         `json:"origin" validate:"required"`
+	UserID     webchat.UserID `json:"user_id"`
 }
 
 func (s *server) handleSend(w http.ResponseWriter, r *http.Request) {
@@ -199,8 +194,8 @@ func (s *server) handleSend(w http.ResponseWriter, r *http.Request) {
 
 	var user webchat.User
 	var err error
-	if payload.User != nil {
-		user, err = s.store.GetUser(ctx, payload.User.Email)
+	if payload.UserID != webchat.NilUserID {
+		user, err = s.store.GetUser(ctx, payload.UserID)
 		if err != nil {
 			writeErrorResponse(w, http.StatusNotFound, "no such user")
 			return

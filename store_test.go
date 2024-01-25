@@ -35,17 +35,17 @@ func TestStore(t *testing.T) {
 	assert.Equal(t, twcUUID, ch.UUID())
 
 	// no such user
-	user, err := store.GetUser(ctx, "jim@nyaruka.com")
+	user, err := store.GetUser(ctx, 345678)
 	assert.EqualError(t, err, "user query returned no rows")
 	assert.Nil(t, user)
 
 	// from db
-	user, err = store.GetUser(ctx, "bob@nyaruka.com")
+	user, err = store.GetUser(ctx, bobID)
 	assert.NoError(t, err)
 	assert.Equal(t, bobID, user.ID())
 
 	// from cache
-	user, err = store.GetUser(ctx, "bob@nyaruka.com")
+	user, err = store.GetUser(ctx, bobID)
 	assert.NoError(t, err)
 	assert.Equal(t, bobID, user.ID())
 }

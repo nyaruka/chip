@@ -42,11 +42,11 @@ func (u *user) MarshalJSON() ([]byte, error) {
 
 const sqlSelectUser = `
 SELECT row_to_json(r) FROM (
-	SELECT id, email, first_name, last_name FROM auth_user WHERE email = $1 AND is_active
+	SELECT id, email, first_name, last_name FROM auth_user WHERE id = $1 AND is_active
 ) r`
 
-func LoadUser(ctx context.Context, rt *runtime.Runtime, email string) (User, error) {
-	rows, err := rt.DB.QueryContext(ctx, sqlSelectUser, email)
+func LoadUser(ctx context.Context, rt *runtime.Runtime, id UserID) (User, error) {
+	rows, err := rt.DB.QueryContext(ctx, sqlSelectUser, id)
 	if err != nil {
 		return nil, errors.Wrap(err, "error querying user")
 	}

@@ -8,7 +8,7 @@ require (
 	github.com/gomodule/redigo v1.8.9
 	github.com/lib/pq v1.10.9
 	github.com/nyaruka/ezconf v0.3.0
-	github.com/nyaruka/gocommon v1.52.0
+	github.com/nyaruka/gocommon v1.52.3
 	github.com/nyaruka/null/v2 v2.0.3
 	github.com/nyaruka/redisx v0.6.0
 	github.com/pkg/errors v0.9.1

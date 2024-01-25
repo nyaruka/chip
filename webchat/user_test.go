@@ -16,10 +16,10 @@ func TestLoadUser(t *testing.T) {
 
 	bobID := testsuite.InsertUser(rt, "bob@nyaruka.com", "Bob", "McFlows")
 
-	_, err := webchat.LoadUser(ctx, rt, "bob@xxx.com")
+	_, err := webchat.LoadUser(ctx, rt, 1234567)
 	assert.EqualError(t, err, "user query returned no rows")
 
-	u, err := webchat.LoadUser(ctx, rt, "bob@nyaruka.com")
+	u, err := webchat.LoadUser(ctx, rt, bobID)
 	assert.NoError(t, err)
 	assert.Equal(t, bobID, u.ID())
 	assert.Equal(t, "bob@nyaruka.com", u.Email())
