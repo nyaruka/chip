@@ -8,18 +8,19 @@ import (
 
 	"github.com/nyaruka/gocommon/httpx"
 	"github.com/nyaruka/gocommon/jsonx"
+	"github.com/nyaruka/gocommon/urns"
 	"github.com/nyaruka/tembachat/core/events"
 	"github.com/nyaruka/tembachat/core/models"
 	"github.com/nyaruka/tembachat/runtime"
 )
 
 type courierChat struct {
-	Identifier string `json:"identifier"`
+	URN urns.URN `json:"urn"`
 }
 
 type courierMsg struct {
-	Identifier string `json:"identifier"`
-	Text       string `json:"text"`
+	URN  urns.URN `json:"urn"`
+	Text string   `json:"text"`
 }
 
 type courierPayload struct {
@@ -40,13 +41,13 @@ func notifyCourier(baseURL string, channelUUID models.ChannelUUID, payload *cour
 	}
 }
 
-func Notify(cfg *runtime.Config, c models.Channel, identifier string, e events.Event) {
+func Notify(cfg *runtime.Config, c models.Channel, u urns.URN, e events.Event) {
 	switch typed := e.(type) {
 	case *events.ChatStarted:
 		notifyCourier(cfg.Courier, c.UUID(), &courierPayload{
 			Type: "chat_started",
 			Chat: &courierChat{
-				Identifier: identifier,
+				URN: u,
 			},
 		})
 
@@ -54,8 +55,8 @@ func Notify(cfg *runtime.Config, c models.Channel, identifier string, e events.E
 		notifyCourier(cfg.Courier, c.UUID(), &courierPayload{
 			Type: "msg_in",
 			Msg: &courierMsg{
-				Identifier: identifier,
-				Text:       typed.Text,
+				URN:  u,
+				Text: typed.Text,
 			},
 		})
 	}

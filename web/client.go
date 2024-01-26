@@ -7,6 +7,7 @@ import (
 	"github.com/nyaruka/gocommon/httpx"
 	"github.com/nyaruka/gocommon/jsonx"
 	"github.com/nyaruka/gocommon/random"
+	"github.com/nyaruka/gocommon/urns"
 	"github.com/nyaruka/tembachat/core/events"
 	"github.com/nyaruka/tembachat/core/models"
 )
@@ -18,31 +19,34 @@ func newIdentifier() string {
 }
 
 type Client struct {
-	server     *Server
-	socket     httpx.WebSocket
-	channel    models.Channel
-	identifier string
+	server  *Server
+	socket  httpx.WebSocket
+	channel models.Channel
 
-	courierQueue     chan events.Event
-	courierStop      chan bool
-	courierWaitGroup sync.WaitGroup
+	chatID string
+	email  string
+
+	inboxQueue     chan events.Event
+	inboxStop      chan bool
+	inboxWaitGroup sync.WaitGroup
 }
 
-func NewClient(s *Server, sock httpx.WebSocket, channel models.Channel, identifier string) *Client {
+func NewClient(s *Server, sock httpx.WebSocket, channel models.Channel, chatID, email string) *Client {
 	isNew := false
-	if identifier == "" {
-		identifier = newIdentifier()
+	if chatID == "" {
+		chatID = newIdentifier()
 		isNew = true
 	}
 
 	c := &Client{
-		server:     s,
-		socket:     sock,
-		channel:    channel,
-		identifier: identifier,
+		server:  s,
+		socket:  sock,
+		channel: channel,
+		chatID:  chatID,
+		email:   email,
 
-		courierQueue: make(chan events.Event, 10),
-		courierStop:  make(chan bool),
+		inboxQueue: make(chan events.Event, 10),
+		inboxStop:  make(chan bool),
 	}
 
 	c.socket.OnMessage(c.onMessage)
@@ -55,35 +59,35 @@ func NewClient(s *Server, sock httpx.WebSocket, channel models.Channel, identifi
 
 	if isNew {
 		// create a chat_started event and send to both client and courier
-		evt := events.NewChatStarted(c.Identifier())
+		evt := events.NewChatStarted(chatID)
 		c.Send(evt)
-		c.courierQueue <- evt
+		c.inboxQueue <- evt
 	} else {
-		evt := events.NewChatResumed(c.Identifier())
+		evt := events.NewChatResumed(chatID, email)
 		c.Send(evt)
 	}
 
 	return c
 }
 
-func (c *Client) Identifier() string { return c.identifier }
-
 func (c *Client) Channel() models.Channel { return c.channel }
+func (c *Client) ChatID() string          { return c.chatID }
+func (c *Client) Email() string           { return c.email }
+func (c *Client) URN() urns.URN           { return models.NewURN(c.chatID, c.email) }
 
 func (c *Client) onMessage(msg []byte) {
-	// for now only one type of event supported
-	evt := &events.MsgIn{}
-	if err := jsonx.Unmarshal(msg, evt); err != nil {
-		slog.Error("unable to unmarshal message", "client", c.identifier, "error", err)
+	evt, err := events.ReadEvent(msg)
+	if err != nil {
+		slog.Error("unable to unmarshal event", "chat_id", c.chatID, "error", err)
 	} else {
-		c.courierQueue <- evt
+		c.inboxQueue <- evt
 	}
 }
 
 func (c *Client) onClose(code int) {
 	c.server.Disconnect(c)
 
-	c.courierStop <- true
+	c.inboxStop <- true
 }
 
 func (c *Client) Send(e events.Event) {
@@ -93,18 +97,18 @@ func (c *Client) Send(e events.Event) {
 func (c *Client) Stop() {
 	c.socket.Close(1000)
 
-	c.courierWaitGroup.Wait()
+	c.inboxWaitGroup.Wait()
 }
 
 func (c *Client) courierNotifier() {
-	c.courierWaitGroup.Add(1)
-	defer c.courierWaitGroup.Done()
+	c.inboxWaitGroup.Add(1)
+	defer c.inboxWaitGroup.Done()
 
 	for {
 		select {
-		case evt := <-c.courierQueue:
-			c.server.NotifyCourier(c, evt)
-		case <-c.courierStop:
+		case evt := <-c.inboxQueue:
+			c.server.onChatReceive(c, evt)
+		case <-c.inboxStop:
 			return
 		}
 	}

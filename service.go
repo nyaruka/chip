@@ -4,7 +4,9 @@ import (
 	"log/slog"
 
 	"github.com/nyaruka/redisx"
+	"github.com/nyaruka/tembachat/core/events"
 	"github.com/nyaruka/tembachat/core/models"
+	"github.com/nyaruka/tembachat/courier"
 	"github.com/nyaruka/tembachat/runtime"
 	"github.com/nyaruka/tembachat/web"
 	"github.com/pkg/errors"
@@ -20,11 +22,11 @@ func NewService(cfg *runtime.Config) *Service {
 	rt := &runtime.Runtime{Config: cfg}
 	store := models.NewStore(rt)
 
-	return &Service{
-		rt:     rt,
-		server: web.NewServer(rt, store),
-		store:  store,
-	}
+	s := &Service{rt: rt, store: store}
+
+	s.server = web.NewServer(rt, store, s.handleSendRequest, s.handleChatReceived)
+
+	return s
 }
 
 func (s *Service) Start() error {
@@ -60,4 +62,21 @@ func (s *Service) Stop() {
 	s.store.Close()
 
 	log.Info("stopped")
+}
+
+func (s *Service) handleSendRequest(msg *models.MsgOut) {
+	// TODO queue message to Redis, let different service instances pick off messages to send via chat or email
+
+	client := s.server.GetClient(msg.ChatID)
+	client.Send(events.NewMsgOut(msg.Text, msg.Origin, msg.User))
+}
+
+func (s *Service) handleChatReceived(c *web.Client, e events.Event) {
+	switch e.(type) {
+	case *events.ChatStarted, *events.MsgIn:
+		courier.Notify(s.rt.Config, c.Channel(), c.URN(), e)
+
+	case *events.EmailAdded:
+		// TODO update URN? add new URN?
+	}
 }
