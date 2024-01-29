@@ -16,23 +16,23 @@ func TestStore(t *testing.T) {
 	store := models.NewStore(rt)
 
 	orgID := testsuite.InsertOrg(rt, "Nyaruka")
-	twcUUID := testsuite.InsertChannel(rt, orgID, "TWC", "WebChat", "123", []string{"webchat"})
+	testsuite.InsertChannel(rt, "8291264a-4581-4d12-96e5-e9fcfa6e68d9", orgID, "TWC", "WebChat", "123", []string{"webchat"})
 	bobID := testsuite.InsertUser(rt, "bob@nyaruka.com", "Bob", "McFlows")
 
 	// no such channel
-	ch, err := store.GetChannel(ctx, "8db60a9e-a2aa-4bd3-936b-8c87ba0b16fb")
+	ch, err := store.GetChannel(ctx, "71cdbd54-30c4-4ae6-b122-0a153573d912")
 	assert.EqualError(t, err, "channel query returned no rows")
 	assert.Nil(t, ch)
 
 	// from db
-	ch, err = store.GetChannel(ctx, twcUUID)
+	ch, err = store.GetChannel(ctx, "8291264a-4581-4d12-96e5-e9fcfa6e68d9")
 	assert.NoError(t, err)
-	assert.Equal(t, twcUUID, ch.UUID())
+	assert.Equal(t, models.ChannelUUID("8291264a-4581-4d12-96e5-e9fcfa6e68d9"), ch.UUID())
 
 	// from cache
-	ch, err = store.GetChannel(ctx, twcUUID)
+	ch, err = store.GetChannel(ctx, "8291264a-4581-4d12-96e5-e9fcfa6e68d9")
 	assert.NoError(t, err)
-	assert.Equal(t, twcUUID, ch.UUID())
+	assert.Equal(t, models.ChannelUUID("8291264a-4581-4d12-96e5-e9fcfa6e68d9"), ch.UUID())
 
 	// no such user
 	user, err := store.GetUser(ctx, 345678)

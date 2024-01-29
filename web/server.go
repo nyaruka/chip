@@ -17,29 +17,31 @@ import (
 	"golang.org/x/exp/maps"
 )
 
+type Service interface {
+	Store() models.Store
+	OnChatStarted(models.Channel, *models.Contact)
+	OnChatReceive(models.Channel, *models.Contact, events.Event)
+	OnSendRequest(*models.MsgOut)
+}
+
 type Server struct {
 	rt         *runtime.Runtime
-	store      models.Store
+	service    Service
 	httpServer *http.Server
 	wg         sync.WaitGroup
-
-	onSendRequest func(*models.MsgOut)
-	onChatReceive func(*Client, events.Event)
 
 	clients     map[models.ChatID]*Client
 	clientMutex *sync.RWMutex
 }
 
-func NewServer(rt *runtime.Runtime, store models.Store, onSendRequest func(*models.MsgOut), onChatReceive func(*Client, events.Event)) *Server {
+func NewServer(rt *runtime.Runtime, service Service) *Server {
 	return &Server{
-		rt:    rt,
-		store: store,
+		rt: rt,
 		httpServer: &http.Server{
 			Addr: fmt.Sprintf("%s:%d", rt.Config.Address, rt.Config.Port),
 		},
 
-		onSendRequest: onSendRequest,
-		onChatReceive: onChatReceive,
+		service: service,
 
 		clients:     make(map[models.ChatID]*Client),
 		clientMutex: &sync.RWMutex{},
@@ -100,14 +102,14 @@ func (s *Server) handleStart(w http.ResponseWriter, r *http.Request) {
 		writeErrorResponse(w, http.StatusBadRequest, "invalid channel UUID")
 		return
 	}
-	channel, err := s.store.GetChannel(ctx, channelUUID)
+	channel, err := s.service.Store().GetChannel(ctx, channelUUID)
 	if err != nil {
 		writeErrorResponse(w, http.StatusBadRequest, "no such channel")
 		return
 	}
 
 	// if chat ID was provided, lookup the contact
-	var contact models.Contact
+	var contact *models.Contact
 	isNew := false
 	if chatID != "" {
 		contact, err = models.LoadContact(ctx, s.rt, channel, chatID)
@@ -128,6 +130,10 @@ func (s *Server) handleStart(w http.ResponseWriter, r *http.Request) {
 	}
 
 	NewClient(s, sock, channel, contact, isNew)
+
+	if isNew {
+		s.service.OnChatStarted(channel, contact)
+	}
 }
 
 type sendRequest struct {
@@ -155,28 +161,22 @@ func (s *Server) handleSend(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	channel, err := s.store.GetChannel(ctx, payload.ChannelUUID)
+	channel, err := s.service.Store().GetChannel(ctx, payload.ChannelUUID)
 	if err != nil {
 		writeErrorResponse(w, http.StatusBadRequest, "channel not found")
 		return
 	}
 
-	contact, err := models.LoadContact(ctx, s.rt, channel, payload.ChatID)
-	if err != nil {
-		writeErrorResponse(w, http.StatusBadRequest, "contact not found")
-		return
-	}
-
 	var user models.User
 	if payload.UserID != models.NilUserID {
-		user, err = s.store.GetUser(ctx, payload.UserID)
+		user, err = s.service.Store().GetUser(ctx, payload.UserID)
 		if err != nil {
 			writeErrorResponse(w, http.StatusNotFound, "user not found")
 			return
 		}
 	}
 
-	s.onSendRequest(models.NewMsgOut(payload.MsgID, channel, contact, payload.Text, payload.Origin, user))
+	s.service.OnSendRequest(models.NewMsgOut(payload.MsgID, channel, payload.ChatID, payload.Text, payload.Origin, user))
 
 	w.Write(jsonx.MustMarshal(map[string]any{"status": "queued"}))
 }
@@ -190,24 +190,24 @@ func (s *Server) GetClient(chatID models.ChatID) *Client {
 
 func (s *Server) Connect(c *Client) {
 	s.clientMutex.Lock()
-	s.clients[c.contact.ChatID()] = c
+	s.clients[c.contact.ChatID] = c
 	total := len(s.clients)
 	s.clientMutex.Unlock()
 
 	s.wg.Add(1)
 
-	slog.Info("client connected", "chat_id", c.contact.ChatID(), "total", total)
+	slog.Info("client connected", "chat_id", c.contact.ChatID, "total", total)
 }
 
 func (s *Server) Disconnect(c *Client) {
 	s.clientMutex.Lock()
-	delete(s.clients, c.contact.ChatID())
+	delete(s.clients, c.contact.ChatID)
 	total := len(s.clients)
 	s.clientMutex.Unlock()
 
 	s.wg.Done()
 
-	slog.Info("client disconnected", "chat_id", c.contact.ChatID(), "total", total)
+	slog.Info("client disconnected", "chat_id", c.contact.ChatID, "total", total)
 }
 
 func writeErrorResponse(w http.ResponseWriter, status int, msg string) {

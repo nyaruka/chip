@@ -10,3 +10,7 @@ type MsgIn struct {
 	baseEvent
 	Text string `json:"text" validate:"required"`
 }
+
+func NewMsgIn(text string) *MsgIn {
+	return &MsgIn{Text: text}
+}

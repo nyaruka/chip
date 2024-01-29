@@ -1,12 +1,14 @@
 package tembachat
 
 import (
+	"context"
 	"log/slog"
+	"time"
 
 	"github.com/nyaruka/redisx"
+	"github.com/nyaruka/tembachat/core/courier"
 	"github.com/nyaruka/tembachat/core/events"
 	"github.com/nyaruka/tembachat/core/models"
-	"github.com/nyaruka/tembachat/courier"
 	"github.com/nyaruka/tembachat/runtime"
 	"github.com/nyaruka/tembachat/web"
 	"github.com/pkg/errors"
@@ -20,11 +22,10 @@ type Service struct {
 
 func NewService(cfg *runtime.Config) *Service {
 	rt := &runtime.Runtime{Config: cfg}
-	store := models.NewStore(rt)
 
-	s := &Service{rt: rt, store: store}
+	s := &Service{rt: rt, store: models.NewStore(rt)}
 
-	s.server = web.NewServer(rt, store, s.handleSendRequest, s.handleChatReceived)
+	s.server = web.NewServer(rt, s)
 
 	return s
 }
@@ -64,19 +65,37 @@ func (s *Service) Stop() {
 	log.Info("stopped")
 }
 
-func (s *Service) handleSendRequest(msg *models.MsgOut) {
-	// TODO queue message to Redis, let different service instances pick off messages to send via chat or email
+func (s *Service) Store() models.Store { return s.store }
 
-	client := s.server.GetClient(msg.Contact.ChatID())
-	client.Send(events.NewMsgOut(msg.Text, msg.Origin, msg.User))
+func (s *Service) OnChatStarted(channel models.Channel, contact *models.Contact) {
+	log := slog.With("comp", "service")
+
+	if err := courier.NotifyChatStarted(s.rt.Config, channel, contact); err != nil {
+		log.Error("error notifying courier", "error", err)
+	}
 }
 
-func (s *Service) handleChatReceived(c *web.Client, e events.Event) {
-	switch e.(type) {
-	case *events.ChatStarted, *events.MsgIn:
-		courier.Notify(s.rt.Config, c.Channel(), c.Contact(), e)
+func (s *Service) OnChatReceive(channel models.Channel, contact *models.Contact, e events.Event) {
+	log := slog.With("comp", "service")
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	switch typed := e.(type) {
+	case *events.MsgIn:
+		if err := courier.NotifyMsgIn(s.rt.Config, channel, contact, typed); err != nil {
+			log.Error("error notifying courier", "error", err)
+		}
 
 	case *events.EmailAdded:
-		// TODO update URN? add new URN?
+		if err := contact.UpdateEmail(ctx, s.rt, typed.Email); err != nil {
+			log.Error("error updating email", "error", err)
+		}
 	}
+}
+
+func (s *Service) OnSendRequest(msg *models.MsgOut) {
+	// TODO queue message to Redis, let different service instances pick off messages to send via chat or email
+
+	client := s.server.GetClient(msg.ChatID)
+	client.Send(events.NewMsgOut(msg.Text, msg.Origin, msg.User))
 }

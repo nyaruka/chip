@@ -20,39 +20,51 @@ func NewChatID() ChatID {
 	return ChatID(random.String(24, chatIDRunes))
 }
 
-type Contact interface {
-	OrgID() OrgID
-	ChatID() ChatID
-	Email() string
+type Contact struct {
+	OrgID  OrgID  `json:"org_id"`
+	ChatID ChatID `json:"chat_id"`
+	Email  string `json:"email"`
 }
 
-type contact struct {
-	OrgID_  OrgID  `json:"org_id"`
-	ChatID_ ChatID `json:"chat_id"`
-	Email_  string `json:"email"`
+func NewContact(ch Channel) *Contact {
+	return &Contact{OrgID: ch.OrgID(), ChatID: NewChatID()}
 }
 
-func (c *contact) OrgID() OrgID   { return c.OrgID_ }
-func (c *contact) ChatID() ChatID { return c.ChatID_ }
-func (c *contact) Email() string  { return c.Email_ }
+func (c *Contact) UpdateEmail(ctx context.Context, rt *runtime.Runtime, email string) error {
+	c.Email = email
 
-func NewContact(ch Channel) Contact {
-	return &contact{OrgID_: ch.OrgID(), ChatID_: NewChatID()}
+	urn, _ := urns.NewURNFromParts(urns.WebChatScheme, string(c.ChatID), "", "")
+
+	row := rt.DB.QueryRowContext(ctx,
+		`UPDATE contacts_contacturn SET display = $3 WHERE org_id = $1 AND identity = $2 RETURNING contact_id`, c.OrgID, urn, email,
+	)
+
+	var contactID ContactID
+	if err := row.Scan(&contactID); err != nil {
+		return errors.Wrap(err, "error updating URN display")
+	}
+
+	_, err := rt.DB.ExecContext(ctx, `UPDATE contacts_contact SET modified_on = NOW() WHERE id = $1`, contactID)
+	if err != nil {
+		return errors.Wrap(err, "error updating contact modified_on")
+	}
+
+	return nil
 }
 
-const sqlSelectURN = `
+const sqlSelectContact = `
 SELECT row_to_json(r) FROM (
 	SELECT org_id, path AS chat_id, display AS email FROM contacts_contacturn WHERE org_id = $1 AND identity = $2
 ) r`
 
-func LoadContact(ctx context.Context, rt *runtime.Runtime, channel Channel, chatID ChatID) (Contact, error) {
+func LoadContact(ctx context.Context, rt *runtime.Runtime, channel Channel, chatID ChatID) (*Contact, error) {
 	// convert chatID to a webchat URN amd check that's valid
 	urn, err := urns.NewURNFromParts(urns.WebChatScheme, string(chatID), "", "")
 	if err != nil {
 		return nil, err
 	}
 
-	rows, err := rt.DB.QueryContext(ctx, sqlSelectURN, channel.OrgID(), urn.Identity())
+	rows, err := rt.DB.QueryContext(ctx, sqlSelectContact, channel.OrgID(), urn.Identity())
 	if err != nil {
 		return nil, errors.Wrap(err, "error querying contact")
 	}
@@ -61,7 +73,7 @@ func LoadContact(ctx context.Context, rt *runtime.Runtime, channel Channel, chat
 	if !rows.Next() {
 		return nil, errors.New("contact query returned no rows")
 	}
-	c := &contact{}
+	c := &Contact{}
 	if err := dbutil.ScanJSON(rows, c); err != nil {
 		return nil, errors.Wrap(err, "error scanning contact")
 	}

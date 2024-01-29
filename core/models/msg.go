@@ -14,12 +14,12 @@ const (
 type MsgOut struct {
 	ID      MsgID
 	Channel Channel
-	Contact Contact
+	ChatID  ChatID
 	Text    string
 	Origin  MsgOrigin
 	User    User
 }
 
-func NewMsgOut(id MsgID, ch Channel, contact Contact, text string, origin MsgOrigin, u User) *MsgOut {
-	return &MsgOut{ID: id, Channel: ch, Contact: contact, Text: text, Origin: origin, User: u}
+func NewMsgOut(id MsgID, ch Channel, chatID ChatID, text string, origin MsgOrigin, u User) *MsgOut {
+	return &MsgOut{ID: id, Channel: ch, ChatID: chatID, Text: text, Origin: origin, User: u}
 }
