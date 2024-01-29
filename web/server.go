@@ -129,7 +129,20 @@ func (s *Server) handleStart(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	NewClient(s, sock, channel, contact, isNew)
+	s.clientMutex.Lock()
+
+	if _, exists := s.clients[contact.ChatID]; !exists {
+		s.clients[contact.ChatID] = NewClient(s, sock, channel, contact, isNew)
+	} else {
+		sock.Close(1008)
+
+		slog.Info("rejected duplicate connection", "channel", channel.UUID(), "chat_id", contact.ChatID)
+	}
+
+	total := len(s.clients)
+	s.clientMutex.Unlock()
+	s.wg.Add(1)
+	slog.Info("client connected", "channel", channel.UUID(), "chat_id", contact.ChatID, "total", total)
 
 	if isNew {
 		s.service.OnChatStarted(channel, contact)
@@ -188,18 +201,7 @@ func (s *Server) GetClient(chatID models.ChatID) *Client {
 	return s.clients[chatID]
 }
 
-func (s *Server) Connect(c *Client) {
-	s.clientMutex.Lock()
-	s.clients[c.contact.ChatID] = c
-	total := len(s.clients)
-	s.clientMutex.Unlock()
-
-	s.wg.Add(1)
-
-	slog.Info("client connected", "chat_id", c.contact.ChatID, "total", total)
-}
-
-func (s *Server) Disconnect(c *Client) {
+func (s *Server) OnDisconnect(c *Client) {
 	s.clientMutex.Lock()
 	delete(s.clients, c.contact.ChatID)
 	total := len(s.clients)
@@ -207,7 +209,11 @@ func (s *Server) Disconnect(c *Client) {
 
 	s.wg.Done()
 
-	slog.Info("client disconnected", "chat_id", c.contact.ChatID, "total", total)
+	slog.Info("client disconnected", "channel", c.channel.UUID(), "chat_id", c.contact.ChatID, "total", total)
+}
+
+func clientKey(c *Client) string {
+	return fmt.Sprintf("%s:%s", c.channel.UUID(), c.contact.ChatID)
 }
 
 func writeErrorResponse(w http.ResponseWriter, status int, msg string) {

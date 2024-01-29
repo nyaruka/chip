@@ -28,8 +28,6 @@ func NewClient(s *Server, sock httpx.WebSocket, channel models.Channel, contact 
 	c.socket.OnClose(c.onClose)
 	c.socket.Start()
 
-	c.server.Connect(c)
-
 	if isNew {
 		c.Send(events.NewChatStarted(contact.ChatID))
 	} else {
@@ -49,7 +47,7 @@ func (c *Client) onMessage(msg []byte) {
 }
 
 func (c *Client) onClose(code int) {
-	c.server.Disconnect(c)
+	c.server.OnDisconnect(c)
 }
 
 func (c *Client) Send(e events.Event) {

@@ -9,21 +9,27 @@ import (
 	"github.com/nyaruka/tembachat/core/courier"
 	"github.com/nyaruka/tembachat/core/events"
 	"github.com/nyaruka/tembachat/core/models"
+	"github.com/nyaruka/tembachat/core/queue"
 	"github.com/nyaruka/tembachat/runtime"
 	"github.com/nyaruka/tembachat/web"
 	"github.com/pkg/errors"
 )
 
 type Service struct {
-	rt     *runtime.Runtime
-	server *web.Server
-	store  models.Store
+	rt       *runtime.Runtime
+	server   *web.Server
+	store    models.Store
+	outboxes *queue.Outboxes
 }
 
 func NewService(cfg *runtime.Config) *Service {
 	rt := &runtime.Runtime{Config: cfg}
 
-	s := &Service{rt: rt, store: models.NewStore(rt)}
+	s := &Service{
+		rt:       rt,
+		store:    models.NewStore(rt),
+		outboxes: &queue.Outboxes{KeyBase: "chat"},
+	}
 
 	s.server = web.NewServer(rt, s)
 
