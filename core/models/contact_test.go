@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestURNExists(t *testing.T) {
+func TestLoadContact(t *testing.T) {
 	ctx, rt := testsuite.Runtime()
 
 	defer testsuite.ResetDB()
@@ -22,11 +22,10 @@ func TestURNExists(t *testing.T) {
 	channel, err := models.LoadChannel(ctx, rt, twcUUID)
 	require.NoError(t, err)
 
-	exists, err := models.URNExists(ctx, rt, channel, "webchat:65vbbDAQCdPdEWlEhDGy4utO")
+	bob, err := models.LoadContact(ctx, rt, channel, "65vbbDAQCdPdEWlEhDGy4utO")
 	assert.NoError(t, err)
-	assert.True(t, exists)
+	assert.Equal(t, models.ChatID("65vbbDAQCdPdEWlEhDGy4utO"), bob.ChatID())
 
-	exists, err = models.URNExists(ctx, rt, channel, "webchat:123456789012345678901234")
-	assert.NoError(t, err)
-	assert.False(t, exists)
+	_, err = models.LoadContact(ctx, rt, channel, "123456789012345678901234")
+	assert.EqualError(t, err, "contact query returned no rows")
 }

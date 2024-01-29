@@ -6,44 +6,27 @@ import (
 
 	"github.com/nyaruka/gocommon/httpx"
 	"github.com/nyaruka/gocommon/jsonx"
-	"github.com/nyaruka/gocommon/random"
-	"github.com/nyaruka/gocommon/urns"
 	"github.com/nyaruka/tembachat/core/events"
 	"github.com/nyaruka/tembachat/core/models"
 )
-
-var identifierRunes = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789")
-
-func newIdentifier() string {
-	return random.String(24, identifierRunes)
-}
 
 type Client struct {
 	server  *Server
 	socket  httpx.WebSocket
 	channel models.Channel
-
-	chatID string
-	email  string
+	contact models.Contact
 
 	inboxQueue     chan events.Event
 	inboxStop      chan bool
 	inboxWaitGroup sync.WaitGroup
 }
 
-func NewClient(s *Server, sock httpx.WebSocket, channel models.Channel, chatID, email string) *Client {
-	isNew := false
-	if chatID == "" {
-		chatID = newIdentifier()
-		isNew = true
-	}
-
+func NewClient(s *Server, sock httpx.WebSocket, channel models.Channel, contact models.Contact, isNew bool) *Client {
 	c := &Client{
 		server:  s,
 		socket:  sock,
 		channel: channel,
-		chatID:  chatID,
-		email:   email,
+		contact: contact,
 
 		inboxQueue: make(chan events.Event, 10),
 		inboxStop:  make(chan bool),
@@ -59,11 +42,11 @@ func NewClient(s *Server, sock httpx.WebSocket, channel models.Channel, chatID, 
 
 	if isNew {
 		// create a chat_started event and send to both client and courier
-		evt := events.NewChatStarted(chatID)
+		evt := events.NewChatStarted(c.contact.ChatID())
 		c.Send(evt)
 		c.inboxQueue <- evt
 	} else {
-		evt := events.NewChatResumed(chatID, email)
+		evt := events.NewChatResumed(c.contact.ChatID(), c.contact.Email())
 		c.Send(evt)
 	}
 
@@ -71,14 +54,12 @@ func NewClient(s *Server, sock httpx.WebSocket, channel models.Channel, chatID, 
 }
 
 func (c *Client) Channel() models.Channel { return c.channel }
-func (c *Client) ChatID() string          { return c.chatID }
-func (c *Client) Email() string           { return c.email }
-func (c *Client) URN() urns.URN           { return models.NewURN(c.chatID, c.email) }
+func (c *Client) Contact() models.Contact { return c.contact }
 
 func (c *Client) onMessage(msg []byte) {
 	evt, err := events.ReadEvent(msg)
 	if err != nil {
-		slog.Error("unable to unmarshal event", "chat_id", c.chatID, "error", err)
+		slog.Error("unable to unmarshal event", "chat_id", c.contact.ChatID(), "error", err)
 	} else {
 		c.inboxQueue <- evt
 	}

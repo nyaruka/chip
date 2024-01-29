@@ -74,8 +74,3 @@ The client can collect an email address by sending a `email_added` event, e.g.
 }
 ```
 
-If an email has been added, then subsequent sockets must be resumed with the email address as well as the chat ID, e.g.
-
-```javascript
-sock = new WebSocket("ws://localhost:8070/start?channel=a204047b-5224-4b8b-a328-08a538f1b3cb&chat_id=65vbbDAQCdPdEWlEhDGy4utO&email=bob@nyaruka.com")
-```

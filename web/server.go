@@ -10,7 +10,6 @@ import (
 
 	"github.com/nyaruka/gocommon/httpx"
 	"github.com/nyaruka/gocommon/jsonx"
-	"github.com/nyaruka/gocommon/urns"
 	"github.com/nyaruka/gocommon/uuids"
 	"github.com/nyaruka/tembachat/core/events"
 	"github.com/nyaruka/tembachat/core/models"
@@ -27,7 +26,7 @@ type Server struct {
 	onSendRequest func(*models.MsgOut)
 	onChatReceive func(*Client, events.Event)
 
-	clients     map[string]*Client
+	clients     map[models.ChatID]*Client
 	clientMutex *sync.RWMutex
 }
 
@@ -42,7 +41,7 @@ func NewServer(rt *runtime.Runtime, store models.Store, onSendRequest func(*mode
 		onSendRequest: onSendRequest,
 		onChatReceive: onChatReceive,
 
-		clients:     make(map[string]*Client),
+		clients:     make(map[models.ChatID]*Client),
 		clientMutex: &sync.RWMutex{},
 	}
 }
@@ -94,38 +93,31 @@ func (s *Server) handleStart(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	channelUUID := r.URL.Query().Get("channel")
-	if !uuids.IsV4(channelUUID) {
+	channelUUID := models.ChannelUUID(r.URL.Query().Get("channel"))
+	chatID := models.ChatID(r.URL.Query().Get("chat_id"))
+
+	if !uuids.IsV4(string(channelUUID)) {
 		writeErrorResponse(w, http.StatusBadRequest, "invalid channel UUID")
 		return
 	}
-	channel, err := s.store.GetChannel(ctx, models.ChannelUUID(channelUUID))
+	channel, err := s.store.GetChannel(ctx, channelUUID)
 	if err != nil {
 		writeErrorResponse(w, http.StatusBadRequest, "no such channel")
 		return
 	}
 
-	chatID := r.URL.Query().Get("chat_id")
-	email := r.URL.Query().Get("email")
-
+	// if chat ID was provided, lookup the contact
+	var contact models.Contact
+	isNew := false
 	if chatID != "" {
-		// convert chatID and email to a webchat URN amd check that's valid
-		urn := models.NewURN(chatID, email)
-		if err := urn.Validate(); err != nil {
-			writeErrorResponse(w, http.StatusBadRequest, "invalid chat ID or email")
-			return
-		}
-
-		// and that it actually exists
-		exists, err := models.URNExists(ctx, s.rt, channel, urn)
+		contact, err = models.LoadContact(ctx, s.rt, channel, chatID)
 		if err != nil {
-			writeErrorResponse(w, http.StatusInternalServerError, "error looking up URN")
+			writeErrorResponse(w, http.StatusInternalServerError, "error looking up contact")
 			return
 		}
-		if !exists {
-			writeErrorResponse(w, http.StatusBadRequest, "no such chat ID or email")
-			return
-		}
+	} else {
+		contact = models.NewContact(channel)
+		isNew = true
 	}
 
 	// hijack the HTTP connection...
@@ -135,13 +127,13 @@ func (s *Server) handleStart(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	NewClient(s, sock, channel, chatID, email)
+	NewClient(s, sock, channel, contact, isNew)
 }
 
 type sendRequest struct {
 	MsgID       models.MsgID       `json:"msg_id"       validate:"required"`
 	ChannelUUID models.ChannelUUID `json:"channel_uuid" validate:"required"`
-	URN         urns.URN           `json:"urn"          validate:"required"`
+	ChatID      models.ChatID      `json:"chat_id"      validate:"required"`
 	Text        string             `json:"text"         validate:"required"`
 	Origin      models.MsgOrigin   `json:"origin"       validate:"required"`
 	UserID      models.UserID      `json:"user_id"`
@@ -158,22 +150,22 @@ func (s *Server) handleSend(w http.ResponseWriter, r *http.Request) {
 	}
 
 	payload := &sendRequest{}
-
 	if err := jsonx.UnmarshalWithLimit(r.Body, payload, 1024*1024); err != nil {
 		writeErrorResponse(w, http.StatusBadRequest, "error reading request")
 		return
 	}
+
 	channel, err := s.store.GetChannel(ctx, payload.ChannelUUID)
 	if err != nil {
 		writeErrorResponse(w, http.StatusBadRequest, "channel not found")
 		return
 	}
 
-	if payload.URN.Scheme() != urns.WebChatScheme || payload.URN.Validate() != nil {
-		writeErrorResponse(w, http.StatusBadRequest, "URN is not valid webchat URN")
+	contact, err := models.LoadContact(ctx, s.rt, channel, payload.ChatID)
+	if err != nil {
+		writeErrorResponse(w, http.StatusBadRequest, "contact not found")
 		return
 	}
-	chatID, email := models.ParseURN(payload.URN)
 
 	var user models.User
 	if payload.UserID != models.NilUserID {
@@ -184,38 +176,38 @@ func (s *Server) handleSend(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	s.onSendRequest(models.NewMsgOut(payload.MsgID, channel, chatID, email, payload.Origin, user))
+	s.onSendRequest(models.NewMsgOut(payload.MsgID, channel, contact, payload.Text, payload.Origin, user))
 
 	w.Write(jsonx.MustMarshal(map[string]any{"status": "queued"}))
 }
 
-func (s *Server) GetClient(identifier string) *Client {
+func (s *Server) GetClient(chatID models.ChatID) *Client {
 	defer s.clientMutex.RUnlock()
 
 	s.clientMutex.RLock()
-	return s.clients[identifier]
+	return s.clients[chatID]
 }
 
 func (s *Server) Connect(c *Client) {
 	s.clientMutex.Lock()
-	s.clients[c.ChatID()] = c
+	s.clients[c.contact.ChatID()] = c
 	total := len(s.clients)
 	s.clientMutex.Unlock()
 
 	s.wg.Add(1)
 
-	slog.Info("client connected", "chat_id", c.ChatID(), "email", c.Email(), "total", total)
+	slog.Info("client connected", "chat_id", c.contact.ChatID(), "total", total)
 }
 
 func (s *Server) Disconnect(c *Client) {
 	s.clientMutex.Lock()
-	delete(s.clients, c.ChatID())
+	delete(s.clients, c.contact.ChatID())
 	total := len(s.clients)
 	s.clientMutex.Unlock()
 
 	s.wg.Done()
 
-	slog.Info("client disconnected", "chat_id", c.ChatID(), "email", c.Email(), "total", total)
+	slog.Info("client disconnected", "chat_id", c.contact.ChatID(), "total", total)
 }
 
 func writeErrorResponse(w http.ResponseWriter, status int, msg string) {

@@ -36,10 +36,10 @@ func InsertContact(rt *runtime.Runtime, orgID models.OrgID, name string) models.
 }
 
 func InsertURN(rt *runtime.Runtime, orgID models.OrgID, contactID models.ContactID, urn urns.URN) models.URNID {
-	scheme, path, _, _ := urn.ToParts()
+	scheme, path, _, display := urn.ToParts()
 	row := rt.DB.QueryRow(
-		`INSERT INTO contacts_contacturn(org_id, contact_id, scheme, path, identity, priority) 
-		VALUES($1, $2, $3, $4, $5, 1000) RETURNING id`, orgID, contactID, scheme, path, urn.Identity(),
+		`INSERT INTO contacts_contacturn(org_id, contact_id, scheme, path, identity, display, priority) 
+		VALUES($1, $2, $3, $4, $5, $6, 1000) RETURNING id`, orgID, contactID, scheme, path, urn.Identity(), display,
 	)
 	var id models.URNID
 	must(row.Scan(&id))
