@@ -3,6 +3,7 @@ package tembachat
 import (
 	"context"
 	"log/slog"
+	"sync"
 	"time"
 
 	"github.com/nyaruka/redisx"
@@ -20,15 +21,19 @@ type Service struct {
 	server   *web.Server
 	store    models.Store
 	outboxes *queue.Outboxes
+
+	senderStop chan bool
+	senderWait sync.WaitGroup
 }
 
 func NewService(cfg *runtime.Config) *Service {
 	rt := &runtime.Runtime{Config: cfg}
 
 	s := &Service{
-		rt:       rt,
-		store:    models.NewStore(rt),
-		outboxes: &queue.Outboxes{KeyBase: "chat"},
+		rt:         rt,
+		store:      models.NewStore(rt),
+		outboxes:   &queue.Outboxes{KeyBase: "chat"},
+		senderStop: make(chan bool),
 	}
 
 	s.server = web.NewServer(rt, s)
@@ -56,6 +61,8 @@ func (s *Service) Start() error {
 
 	s.server.Start()
 
+	go s.sender()
+
 	log.Info("started")
 	return nil
 }
@@ -63,6 +70,9 @@ func (s *Service) Start() error {
 func (s *Service) Stop() {
 	log := slog.With("comp", "service")
 	log.Info("stopping...")
+
+	s.senderStop <- true
+	s.senderWait.Wait()
 
 	s.server.Stop()
 
@@ -100,8 +110,62 @@ func (s *Service) OnChatReceive(channel models.Channel, contact *models.Contact,
 }
 
 func (s *Service) OnSendRequest(msg *models.MsgOut) {
-	// TODO queue message to Redis, let different service instances pick off messages to send via chat or email
+	log := slog.With("comp", "service")
+	rc := s.rt.RP.Get()
+	defer rc.Close()
 
-	client := s.server.GetClient(msg.ChatID)
-	client.Send(events.NewMsgOut(msg.Text, msg.Origin, msg.User))
+	if err := s.outboxes.AddMessage(rc, msg); err != nil {
+		log.Error("error queuing to outbox", "error", err)
+	}
+}
+
+func (s *Service) sender() {
+	defer s.senderWait.Done()
+	s.senderWait.Add(1)
+
+	for {
+		s.send()
+
+		select {
+		case <-s.senderStop:
+			return
+		case <-time.After(500 * time.Millisecond):
+		}
+	}
+}
+
+func (s *Service) send() {
+	log := slog.With("comp", "service")
+
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel()
+
+	rc := s.rt.RP.Get()
+	defer rc.Close()
+
+	chatIDs, err := s.outboxes.Boxes(rc)
+	if err != nil {
+		log.Error("error reading outboxes", "error", err)
+		return
+	}
+
+	for _, chatID := range chatIDs {
+		client := s.server.GetClient(chatID)
+		if client != nil && client.CanSend() {
+			msg, err := s.outboxes.PopMessage(rc, chatID)
+			if err != nil {
+				log.Error("error popping message from outbox", "error", err)
+			} else if msg != nil {
+				var user models.User
+				if msg.UserID != models.NilUserID {
+					user, err = s.store.GetUser(ctx, msg.UserID)
+					if err != nil {
+						log.Error("error fetching user", "error", err)
+					}
+				}
+
+				client.Send(events.NewMsgOut(msg.Text, msg.Origin, user))
+			}
+		}
+	}
 }

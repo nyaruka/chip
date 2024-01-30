@@ -123,7 +123,7 @@ func (s *Server) handleStart(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// hijack the HTTP connection...
-	sock, err := httpx.NewWebSocket(w, r, 4096, 10)
+	sock, err := httpx.NewWebSocket(w, r, 4096, 0)
 	if err != nil {
 		writeErrorResponse(w, http.StatusInternalServerError, "error upgrading connection")
 		return
@@ -150,12 +150,11 @@ func (s *Server) handleStart(w http.ResponseWriter, r *http.Request) {
 }
 
 type sendRequest struct {
-	MsgID       models.MsgID       `json:"msg_id"       validate:"required"`
-	ChannelUUID models.ChannelUUID `json:"channel_uuid" validate:"required"`
-	ChatID      models.ChatID      `json:"chat_id"      validate:"required"`
-	Text        string             `json:"text"         validate:"required"`
-	Origin      models.MsgOrigin   `json:"origin"       validate:"required"`
-	UserID      models.UserID      `json:"user_id"`
+	MsgID  models.MsgID     `json:"msg_id"       validate:"required"`
+	ChatID models.ChatID    `json:"chat_id"      validate:"required"`
+	Text   string           `json:"text"         validate:"required"`
+	Origin models.MsgOrigin `json:"origin"       validate:"required"`
+	UserID models.UserID    `json:"user_id"`
 }
 
 // handles a send message request from courier
@@ -174,13 +173,8 @@ func (s *Server) handleSend(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	channel, err := s.service.Store().GetChannel(ctx, payload.ChannelUUID)
-	if err != nil {
-		writeErrorResponse(w, http.StatusBadRequest, "channel not found")
-		return
-	}
-
 	var user models.User
+	var err error
 	if payload.UserID != models.NilUserID {
 		user, err = s.service.Store().GetUser(ctx, payload.UserID)
 		if err != nil {
@@ -189,7 +183,7 @@ func (s *Server) handleSend(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	s.service.OnSendRequest(models.NewMsgOut(payload.MsgID, channel, payload.ChatID, payload.Text, payload.Origin, user))
+	s.service.OnSendRequest(models.NewMsgOut(payload.MsgID, payload.ChatID, payload.Text, payload.Origin, user, time.Now()))
 
 	w.Write(jsonx.MustMarshal(map[string]any{"status": "queued"}))
 }
@@ -210,10 +204,6 @@ func (s *Server) OnDisconnect(c *Client) {
 	s.wg.Done()
 
 	slog.Info("client disconnected", "channel", c.channel.UUID(), "chat_id", c.contact.ChatID, "total", total)
-}
-
-func clientKey(c *Client) string {
-	return fmt.Sprintf("%s:%s", c.channel.UUID(), c.contact.ChatID)
 }
 
 func writeErrorResponse(w http.ResponseWriter, status int, msg string) {

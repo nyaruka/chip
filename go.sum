@@ -54,8 +54,8 @@ github.com/nyaruka/null/v2 v2.0.3 h1:rdmMRQyVzrOF3Jff/gpU/7BDR9mQX0lcLl4yImsA3kw
 github.com/nyaruka/null/v2 v2.0.3/go.mod h1:OCVeCkCXwrg5/qE6RU0c1oUVZBy+ZDrT+xYg1XSaIWA=
 github.com/nyaruka/phonenumbers v1.3.0 h1:IFyyJfF2Elg8xGKFghWrRXzb6qAHk+Q3uPqmIgS20JQ=
 github.com/nyaruka/phonenumbers v1.3.0/go.mod h1:4jyKp/BFUokLbCHyoZag+T3S1KezFVoEKtgnbpzItC4=
-github.com/nyaruka/redisx v0.6.0 h1:9FumwqNi34mrdIfjODQTtCQoYFMtCJSlpiJaL9v/s6A=
-github.com/nyaruka/redisx v0.6.0/go.mod h1:mpTqnydmHfzeQ8V55AwS/cVrkxzHu4yGvwClEeprvbA=
+github.com/nyaruka/redisx v0.6.4 h1:4wXpHoMKXe0Tw/zdXUd2lwO3TaTDUyOU5VbeLugyQ70=
+github.com/nyaruka/redisx v0.6.4/go.mod h1:mpTqnydmHfzeQ8V55AwS/cVrkxzHu4yGvwClEeprvbA=
 github.com/pingcap/errors v0.11.4 h1:lFuQV/oaUMGcD2tqt+01ROSmJs75VG1ToEOkZIZ4nE4=
 github.com/pingcap/errors v0.11.4/go.mod h1:Oi8TUi2kEtXXLMJk9l1cGmz20kV3TaQ0usTwv5KuLY8=
 github.com/pkg/errors v0.9.1 h1:FEBLx1zS214owpjy7qsBeixbURkuhQAwrK5UwLGTwt4=

@@ -1,5 +1,9 @@
 package models
 
+import (
+	"time"
+)
+
 type MsgID int64
 
 type MsgOrigin string
@@ -12,14 +16,19 @@ const (
 )
 
 type MsgOut struct {
-	ID      MsgID
-	Channel Channel
-	ChatID  ChatID
-	Text    string
-	Origin  MsgOrigin
-	User    User
+	ID     MsgID     `json:"id"`
+	ChatID ChatID    `json:"chat_id"`
+	Text   string    `json:"text"`
+	Origin MsgOrigin `json:"origin"`
+	UserID UserID    `json:"user_id"`
+	Time   time.Time `json:"time"`
 }
 
-func NewMsgOut(id MsgID, ch Channel, chatID ChatID, text string, origin MsgOrigin, u User) *MsgOut {
-	return &MsgOut{ID: id, Channel: ch, ChatID: chatID, Text: text, Origin: origin, User: u}
+func NewMsgOut(id MsgID, chatID ChatID, text string, origin MsgOrigin, u User, t time.Time) *MsgOut {
+	var userID UserID
+	if u != nil {
+		userID = u.ID()
+	}
+
+	return &MsgOut{ID: id, ChatID: chatID, Text: text, Origin: origin, UserID: userID, Time: t}
 }
