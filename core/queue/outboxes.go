@@ -5,6 +5,7 @@ import (
 	_ "embed"
 	"fmt"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gomodule/redigo/redis"
@@ -24,32 +25,35 @@ type Outboxes struct {
 	KeyBase string
 }
 
-func (o *Outboxes) AddMessage(rc redis.Conn, m *models.MsgOut) error {
+func (o *Outboxes) AddMessage(rc redis.Conn, ch models.Channel, m *models.MsgOut) error {
 	rc.Send("MULTI")
-	rc.Send("RPUSH", o.chatQueueKey(m.ChatID), o.encodeMsg(m))
-	rc.Send("ZADD", o.allChatsKey(), "NX", m.Time.UnixMilli(), m.ChatID) // update only if we're first message in queue
+	rc.Send("RPUSH", o.chatQueueKey(ch, m.ChatID), o.encodeMsg(m))
+	rc.Send("ZADD", o.allChatsKey(), "NX", m.Time.UnixMilli(), fmt.Sprintf("%s:%s", ch.UUID(), m.ChatID)) // update only if we're first message in queue
 	_, err := rc.Do("EXEC")
 	return err
 }
 
 type Outbox struct {
-	ChatID models.ChatID
-	Oldest time.Time
+	ChannelUUID models.ChannelUUID
+	ChatID      models.ChatID
+	Oldest      time.Time
 }
 
-func (o *Outboxes) All(rc redis.Conn) ([]Outbox, error) {
+func (o *Outboxes) All(rc redis.Conn) ([]*Outbox, error) {
 	ss, err := redis.Strings(rc.Do("ZRANGE", o.allChatsKey(), "-inf", "+inf", "BYSCORE", "WITHSCORES"))
 	if err != nil {
 		return nil, err
 	}
 
-	boxes := make([]Outbox, len(ss)/2)
+	boxes := make([]*Outbox, len(ss)/2)
 	for i, j := 0, 0; i < len(ss); i += 2 {
+		parts := strings.SplitN(ss[i], ":", 2)
 		ts, _ := strconv.ParseInt(ss[i+1], 10, 64)
 
-		boxes[j] = Outbox{
-			ChatID: models.ChatID(ss[i]),
-			Oldest: time.UnixMilli(ts).In(time.UTC),
+		boxes[j] = &Outbox{
+			ChannelUUID: models.ChannelUUID(parts[0]),
+			ChatID:      models.ChatID(parts[1]),
+			Oldest:      time.UnixMilli(ts).In(time.UTC),
 		}
 
 		j++
@@ -57,8 +61,8 @@ func (o *Outboxes) All(rc redis.Conn) ([]Outbox, error) {
 	return boxes, nil
 }
 
-func (o *Outboxes) PopMessage(rc redis.Conn, chatID models.ChatID) (*models.MsgOut, error) {
-	item, err := redis.Bytes(outboxPopScript.Do(rc, o.chatQueueKey(chatID), o.allChatsKey(), chatID))
+func (o *Outboxes) PopMessage(rc redis.Conn, ch models.Channel, chatID models.ChatID) (*models.MsgOut, error) {
+	item, err := redis.Bytes(outboxPopScript.Do(rc, o.chatQueueKey(ch, chatID), o.allChatsKey(), ch.UUID(), chatID))
 	if err != nil && err != redis.ErrNil {
 		return nil, err
 	}
@@ -66,8 +70,8 @@ func (o *Outboxes) PopMessage(rc redis.Conn, chatID models.ChatID) (*models.MsgO
 	return o.decodeMsg(item), nil
 }
 
-func (o *Outboxes) PopAll(rc redis.Conn, chatID models.ChatID) ([]*models.MsgOut, error) {
-	items, err := redis.ByteSlices(outboxPopAllScript.Do(rc, o.chatQueueKey(chatID), o.allChatsKey(), chatID))
+func (o *Outboxes) PopAll(rc redis.Conn, ch models.Channel, chatID models.ChatID) ([]*models.MsgOut, error) {
+	items, err := redis.ByteSlices(outboxPopAllScript.Do(rc, o.chatQueueKey(ch, chatID), o.allChatsKey(), ch.UUID(), chatID))
 	if err != nil && err != redis.ErrNil {
 		return nil, err
 	}
@@ -80,8 +84,8 @@ func (o *Outboxes) PopAll(rc redis.Conn, chatID models.ChatID) ([]*models.MsgOut
 	return msgs, nil
 }
 
-func (o *Outboxes) chatQueueKey(chatID models.ChatID) string {
-	return fmt.Sprintf("%s:queue:%s", o.KeyBase, chatID)
+func (o *Outboxes) chatQueueKey(channel models.Channel, chatID models.ChatID) string {
+	return fmt.Sprintf("%s:queue:%s:%s", o.KeyBase, channel.UUID(), chatID)
 }
 
 func (o *Outboxes) allChatsKey() string {

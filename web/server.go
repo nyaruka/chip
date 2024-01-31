@@ -21,7 +21,7 @@ type Service interface {
 	Store() models.Store
 	OnChatStarted(models.Channel, *models.Contact)
 	OnChatReceive(models.Channel, *models.Contact, events.Event)
-	OnSendRequest(*models.MsgOut)
+	OnSendRequest(models.Channel, *models.MsgOut)
 }
 
 type Server struct {
@@ -167,14 +167,23 @@ func (s *Server) handleSend(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	channelUUID := models.ChannelUUID(r.URL.Query().Get("channel"))
+
 	payload := &sendRequest{}
 	if err := jsonx.UnmarshalWithLimit(r.Body, payload, 1024*1024); err != nil {
 		writeErrorResponse(w, http.StatusBadRequest, "error reading request")
 		return
 	}
 
+	channel, err := s.service.Store().GetChannel(ctx, channelUUID)
+	if err != nil {
+		writeErrorResponse(w, http.StatusBadRequest, "error looking up channel")
+		return
+	}
+
+	// TODO add channel token based auth
+
 	var user models.User
-	var err error
 	if payload.UserID != models.NilUserID {
 		user, err = s.service.Store().GetUser(ctx, payload.UserID)
 		if err != nil {
@@ -183,7 +192,7 @@ func (s *Server) handleSend(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	s.service.OnSendRequest(models.NewMsgOut(payload.MsgID, payload.ChatID, payload.Text, payload.Origin, user, time.Now()))
+	s.service.OnSendRequest(channel, models.NewMsgOut(payload.MsgID, payload.ChatID, payload.Text, payload.Origin, user, time.Now()))
 
 	w.Write(jsonx.MustMarshal(map[string]any{"status": "queued"}))
 }

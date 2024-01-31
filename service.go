@@ -113,12 +113,12 @@ func (s *Service) OnChatReceive(channel models.Channel, contact *models.Contact,
 	}
 }
 
-func (s *Service) OnSendRequest(msg *models.MsgOut) {
+func (s *Service) OnSendRequest(channel models.Channel, msg *models.MsgOut) {
 	log := slog.With("comp", "service")
 	rc := s.rt.RP.Get()
 	defer rc.Close()
 
-	if err := s.outboxes.AddMessage(rc, msg); err != nil {
+	if err := s.outboxes.AddMessage(rc, channel, msg); err != nil {
 		log.Error("error queuing to outbox", "error", err)
 	}
 }
@@ -154,13 +154,20 @@ func (s *Service) send() {
 	}
 
 	for _, box := range outboxes {
+		ch, err := s.store.GetChannel(ctx, box.ChannelUUID)
+		if err != nil {
+			log.Error("error fetching channel", "error", err)
+			// TODO clear outbox queue ?
+			continue
+		}
+
 		if time.Since(box.Oldest) > outboxTimeLimit {
 			// pop entire outbox and then email or fail
-			msgs, err := s.outboxes.PopAll(rc, box.ChatID)
+			msgs, err := s.outboxes.PopAll(rc, ch, box.ChatID)
 			if err != nil {
 				log.Error("error popping all from outbox", "error", err)
 			} else if len(msgs) > 0 {
-				if err := s.emailOrFail(msgs); err != nil {
+				if err := s.emailOrFail(ctx, ch, box.ChatID, msgs); err != nil {
 					log.Error("error handling stalled outbox", "error", err)
 				}
 			}
@@ -169,7 +176,7 @@ func (s *Service) send() {
 		client := s.server.GetClient(box.ChatID)
 
 		if client != nil && client.CanSend() {
-			msg, err := s.outboxes.PopMessage(rc, box.ChatID)
+			msg, err := s.outboxes.PopMessage(rc, ch, box.ChatID)
 			if err != nil {
 				log.Error("error popping message from outbox", "error", err)
 			} else if msg != nil {
@@ -187,7 +194,7 @@ func (s *Service) send() {
 	}
 }
 
-func (s *Service) emailOrFail([]*models.MsgOut) error {
-	// TODO
+func (s *Service) emailOrFail(ctx context.Context, channel models.Channel, chatID models.ChatID, msgs []*models.MsgOut) error {
+	// TODO load contact, queue messages for email sending, or fail them if no email address
 	return nil
 }

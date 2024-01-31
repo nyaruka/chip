@@ -1,13 +1,13 @@
-local queueKey, queuesKey, chatID = KEYS[1], KEYS[2], ARGV[1]
+local queueKey, queuesKey, channelUUID, chatID = KEYS[1], KEYS[2], ARGV[1], ARGV[2]
 
 local thisItem = redis.call("LPOP", queueKey)
 local nextItem = redis.call("LINDEX", queueKey, 0)
 
 if nextItem == false then
-    redis.call("ZREM", queuesKey, chatID)
+    redis.call("ZREM", queuesKey, channelUUID .. ":" .. chatID)
 else
     local ts = tonumber(string.sub(nextItem, 1, string.find(nextItem, "|", 1, true) - 1))
-    redis.call("ZADD", queuesKey, ts, chatID)
+    redis.call("ZADD", queuesKey, ts, channelUUID .. ":" .. chatID)
 end
 
 return thisItem
