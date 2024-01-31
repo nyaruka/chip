@@ -16,6 +16,10 @@ import (
 	"github.com/pkg/errors"
 )
 
+const (
+	outboxTimeLimit = 2 * time.Minute
+)
+
 type Service struct {
 	rt       *runtime.Runtime
 	server   *web.Server
@@ -129,7 +133,7 @@ func (s *Service) sender() {
 		select {
 		case <-s.senderStop:
 			return
-		case <-time.After(500 * time.Millisecond):
+		case <-time.After(100 * time.Millisecond):
 		}
 	}
 }
@@ -143,16 +147,29 @@ func (s *Service) send() {
 	rc := s.rt.RP.Get()
 	defer rc.Close()
 
-	chatIDs, err := s.outboxes.Boxes(rc)
+	outboxes, err := s.outboxes.All(rc)
 	if err != nil {
 		log.Error("error reading outboxes", "error", err)
 		return
 	}
 
-	for _, chatID := range chatIDs {
-		client := s.server.GetClient(chatID)
+	for _, box := range outboxes {
+		if time.Since(box.Oldest) > outboxTimeLimit {
+			// pop entire outbox and then email or fail
+			msgs, err := s.outboxes.PopAll(rc, box.ChatID)
+			if err != nil {
+				log.Error("error popping all from outbox", "error", err)
+			} else if len(msgs) > 0 {
+				if err := s.emailOrFail(msgs); err != nil {
+					log.Error("error handling stalled outbox", "error", err)
+				}
+			}
+		}
+
+		client := s.server.GetClient(box.ChatID)
+
 		if client != nil && client.CanSend() {
-			msg, err := s.outboxes.PopMessage(rc, chatID)
+			msg, err := s.outboxes.PopMessage(rc, box.ChatID)
 			if err != nil {
 				log.Error("error popping message from outbox", "error", err)
 			} else if msg != nil {
@@ -168,4 +185,9 @@ func (s *Service) send() {
 			}
 		}
 	}
+}
+
+func (s *Service) emailOrFail([]*models.MsgOut) error {
+	// TODO
+	return nil
 }
