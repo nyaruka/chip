@@ -14,24 +14,16 @@ import (
 	"github.com/pkg/errors"
 )
 
-type courierChat struct {
+type receivePayload struct {
 	ChatID models.ChatID `json:"chat_id"`
+	Secret string        `json:"secret"`
+	Events []Event       `json:"events"`
 }
 
-type courierMsg struct {
-	ChatID models.ChatID `json:"chat_id"`
-	Text   string        `json:"text"`
-}
-
-type courierPayload struct {
-	Type string       `json:"type"`
-	Chat *courierChat `json:"chat"`
-	Msg  *courierMsg  `json:"msg"`
-}
-
-func notifyCourier(baseURL string, channelUUID models.ChannelUUID, payload *courierPayload) error {
-	url := fmt.Sprintf("%s/c/twc/%s/receive", baseURL, channelUUID)
-	request, _ := httpx.NewRequest("POST", url, bytes.NewReader(jsonx.MustMarshal(payload)), nil)
+func notifyCourier(baseURL string, ch models.Channel, payload *receivePayload) error {
+	url := fmt.Sprintf("%s/c/twc/%s/receive", baseURL, ch.UUID())
+	body := jsonx.MustMarshal(payload)
+	request, _ := httpx.NewRequest("POST", url, bytes.NewReader(body), nil)
 
 	resp, err := httpx.Do(http.DefaultClient, request, nil, nil)
 	if err != nil {
@@ -40,25 +32,22 @@ func notifyCourier(baseURL string, channelUUID models.ChannelUUID, payload *cour
 		return errors.New("courier returned non-2XX status")
 	}
 
-	slog.Info("courier notified", "event", payload.Type, "status", resp.StatusCode)
+	slog.Debug("courier notified", "event", body, "status", resp.StatusCode)
 	return nil
 }
 
-func NotifyChatStarted(cfg *runtime.Config, channel models.Channel, contact *models.Contact) error {
-	return notifyCourier(cfg.Courier, channel.UUID(), &courierPayload{
-		Type: "chat_started",
-		Chat: &courierChat{
-			ChatID: contact.ChatID,
-		},
+func NotifyChatStarted(cfg *runtime.Config, ch models.Channel, contact *models.Contact) error {
+	return notifyCourier(cfg.Courier, ch, &receivePayload{
+		ChatID: contact.ChatID,
+		Secret: ch.Secret(),
+		Events: []Event{newChatStartedEvent()},
 	})
 }
 
-func NotifyMsgIn(cfg *runtime.Config, channel models.Channel, contact *models.Contact, e *events.MsgIn) error {
-	return notifyCourier(cfg.Courier, channel.UUID(), &courierPayload{
-		Type: "msg_in",
-		Msg: &courierMsg{
-			ChatID: contact.ChatID,
-			Text:   e.Text,
-		},
+func NotifyMsgIn(cfg *runtime.Config, ch models.Channel, contact *models.Contact, e *events.MsgIn) error {
+	return notifyCourier(cfg.Courier, ch, &receivePayload{
+		ChatID: contact.ChatID,
+		Secret: ch.Secret(),
+		Events: []Event{newMsgInEvent(e.Text)},
 	})
 }

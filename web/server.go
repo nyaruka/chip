@@ -150,11 +150,14 @@ func (s *Server) handleStart(w http.ResponseWriter, r *http.Request) {
 }
 
 type sendRequest struct {
-	MsgID  models.MsgID     `json:"msg_id"       validate:"required"`
-	ChatID models.ChatID    `json:"chat_id"      validate:"required"`
-	Text   string           `json:"text"         validate:"required"`
-	Origin models.MsgOrigin `json:"origin"       validate:"required"`
-	UserID models.UserID    `json:"user_id"`
+	ChatID models.ChatID `json:"chat_id"         validate:"required"`
+	Secret string        `json:"secret"          validate:"required"`
+	Msg    struct {
+		ID     models.MsgID     `json:"id"       validate:"required"`
+		Text   string           `json:"text"     validate:"required"`
+		Origin models.MsgOrigin `json:"origin"   validate:"required"`
+		UserID models.UserID    `json:"user_id"`
+	} `json:"msg"`
 }
 
 // handles a send message request from courier
@@ -181,18 +184,21 @@ func (s *Server) handleSend(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// TODO add channel token based auth
+	if channel.Secret() != payload.Secret {
+		writeErrorResponse(w, http.StatusBadRequest, "channel secret incorrect")
+		return
+	}
 
 	var user models.User
-	if payload.UserID != models.NilUserID {
-		user, err = s.service.Store().GetUser(ctx, payload.UserID)
+	if payload.Msg.UserID != models.NilUserID {
+		user, err = s.service.Store().GetUser(ctx, payload.Msg.UserID)
 		if err != nil {
 			writeErrorResponse(w, http.StatusNotFound, "user not found")
 			return
 		}
 	}
 
-	s.service.OnSendRequest(channel, models.NewMsgOut(payload.MsgID, payload.ChatID, payload.Text, payload.Origin, user, time.Now()))
+	s.service.OnSendRequest(channel, models.NewMsgOut(payload.Msg.ID, payload.ChatID, payload.Msg.Text, payload.Msg.Origin, user, time.Now()))
 
 	w.Write(jsonx.MustMarshal(map[string]any{"status": "queued"}))
 }

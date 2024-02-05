@@ -128,6 +128,7 @@ func (s *Service) sender() {
 	s.senderWait.Add(1)
 
 	for {
+		// TODO panic recovery
 		s.send()
 
 		select {
@@ -194,7 +195,7 @@ func (s *Service) send() {
 	}
 }
 
-func (s *Service) emailOrFail(ctx context.Context, channel models.Channel, chatID models.ChatID, msgs []*models.MsgOut) error {
+func (s *Service) emailOrFail(ctx context.Context, ch models.Channel, chatID models.ChatID, msgs []*models.MsgOut) error {
 	// TODO load contact, queue messages for email sending, or fail them if no email address
 	return nil
 }

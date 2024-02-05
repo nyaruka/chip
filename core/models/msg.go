@@ -15,6 +15,12 @@ const (
 	MsgOriginChat      MsgOrigin = "chat"
 )
 
+type MsgStatus string
+
+const (
+	MsgStatusSent MsgStatus = "sent"
+)
+
 type MsgOut struct {
 	ID     MsgID     `json:"id"`
 	ChatID ChatID    `json:"chat_id"`

@@ -15,7 +15,7 @@ type ChannelUUID uuids.UUID
 type Channel interface {
 	UUID() ChannelUUID
 	OrgID() OrgID
-	Config() map[string]any
+	Secret() string
 }
 
 type channel struct {
@@ -24,9 +24,12 @@ type channel struct {
 	Config_ map[string]any `json:"config"`
 }
 
-func (c *channel) UUID() ChannelUUID      { return c.UUID_ }
-func (c *channel) OrgID() OrgID           { return c.OrgID_ }
-func (c *channel) Config() map[string]any { return c.Config_ }
+func (c *channel) UUID() ChannelUUID { return c.UUID_ }
+func (c *channel) OrgID() OrgID      { return c.OrgID_ }
+func (c *channel) Secret() string {
+	s, _ := c.Config_["secret"].(string)
+	return s
+}
 
 const sqlSelectChannel = `
 SELECT row_to_json(r) FROM (
