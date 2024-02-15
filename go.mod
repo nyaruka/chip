@@ -1,6 +1,6 @@
 module github.com/nyaruka/tembachat
 
-go 1.21
+go 1.22
 
 require (
 	github.com/getsentry/sentry-go v0.26.0
