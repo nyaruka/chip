@@ -7,7 +7,7 @@ Webchat server that talks to [Courier](https://github.com/nyaruka/courier/).
 To start chat session as new user:
 
 ```javascript
-sock = new WebSocket("ws://localhost:8070/start?channel=a204047b-5224-4b8b-a328-08a538f1b3cb");
+sock = new WebSocket("ws://localhost:8070/start/a204047b-5224-4b8b-a328-08a538f1b3cb/");
 
 sock.onclose = function (event) {
     console.log("bye!");
@@ -31,7 +31,7 @@ The first message the client will receive will contain the new chat ID:
 The client can store that identifier to reconnect as the same contact in future. Pass it as a param to the start endpoint:
 
 ```javascript
-sock = new WebSocket("ws://localhost:8070/start?channel=a204047b-5224-4b8b-a328-08a538f1b3cb&chat_id=65vbbDAQCdPdEWlEhDGy4utO")
+sock = new WebSocket("ws://localhost:8070/start/a204047b-5224-4b8b-a328-08a538f1b3cb/?chat_id=65vbbDAQCdPdEWlEhDGy4utO")
 ```
 
 And in this case the first message the client will receive will be:
