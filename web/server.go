@@ -1,6 +1,7 @@
 package web
 
 import (
+	"compress/flate"
 	"context"
 	"fmt"
 	"log/slog"
@@ -8,9 +9,10 @@ import (
 	"sync"
 	"time"
 
+	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
 	"github.com/nyaruka/gocommon/httpx"
 	"github.com/nyaruka/gocommon/jsonx"
-	"github.com/nyaruka/gocommon/uuids"
 	"github.com/nyaruka/tembachat/core/events"
 	"github.com/nyaruka/tembachat/core/models"
 	"github.com/nyaruka/tembachat/runtime"
@@ -35,24 +37,34 @@ type Server struct {
 }
 
 func NewServer(rt *runtime.Runtime, service Service) *Server {
-	return &Server{
-		rt: rt,
-		httpServer: &http.Server{
-			Addr: fmt.Sprintf("%s:%d", rt.Config.Address, rt.Config.Port),
-		},
-
+	s := &Server{
+		rt:      rt,
 		service: service,
 
 		clients:     make(map[models.ChatID]*Client),
 		clientMutex: &sync.RWMutex{},
 	}
+
+	router := chi.NewRouter()
+	router.Use(middleware.Compress(flate.DefaultCompression))
+	router.Use(middleware.StripSlashes)
+	router.Use(middleware.RequestID)
+	router.Use(middleware.RealIP)
+	router.Use(middleware.Recoverer)
+	router.Use(middleware.Timeout(15 * time.Second))
+	router.Post("/start/{channel:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}}", s.channelHandler(s.handleStart))
+	router.Post("/send/{channel:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}}", s.channelHandler(s.handleSend))
+
+	s.httpServer = &http.Server{
+		Addr:    fmt.Sprintf("%s:%d", rt.Config.Address, rt.Config.Port),
+		Handler: router,
+	}
+
+	return s
 }
 
 func (s *Server) Start() {
 	log := slog.With("comp", "webserver", "address", s.rt.Config.Address, "port", s.rt.Config.Port)
-
-	http.HandleFunc("POST /start/{channel}/{$}", s.channelHandler(s.handleStart))
-	http.HandleFunc("POST /send/{channel}/{$}", s.channelHandler(s.handleSend))
 
 	s.wg.Add(1)
 
@@ -93,22 +105,15 @@ func (s *Server) Stop() {
 
 func (s *Server) channelHandler(fn func(context.Context, *http.Request, http.ResponseWriter, models.Channel)) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
-		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-		defer cancel()
-
 		channelUUID := models.ChannelUUID(r.PathValue("channel"))
 
-		if !uuids.IsV4(string(channelUUID)) {
-			writeErrorResponse(w, http.StatusBadRequest, "invalid channel UUID")
-			return
-		}
-		ch, err := s.service.Store().GetChannel(ctx, channelUUID)
+		ch, err := s.service.Store().GetChannel(r.Context(), channelUUID)
 		if err != nil {
 			writeErrorResponse(w, http.StatusBadRequest, "no such channel")
 			return
 		}
 
-		fn(ctx, r, w, ch)
+		fn(r.Context(), r, w, ch)
 	}
 }
 
