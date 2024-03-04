@@ -21,6 +21,10 @@ var outboxPopScript = redis.NewScript(2, outboxPop)
 var outboxPopAll string
 var outboxPopAllScript = redis.NewScript(2, outboxPopAll)
 
+//go:embed lua/outbox_pop_stale.lua
+var outboxPopStale string
+var outboxPopStaleScript = redis.NewScript(1, outboxPopStale)
+
 type Outboxes struct {
 	KeyBase string
 }
@@ -68,6 +72,24 @@ func (o *Outboxes) PopMessage(rc redis.Conn, ch models.Channel, chatID models.Ch
 	}
 
 	return o.decodeMsg(item), nil
+}
+
+func (o *Outboxes) PopStale(rc redis.Conn, before time.Time) (models.ChannelUUID, models.ChatID, []*models.MsgOut, error) {
+	items, err := redis.ByteSlices(outboxPopStaleScript.Do(rc, o.allChatsKey(), o.KeyBase, before.UnixMilli()))
+	if err != nil && err != redis.ErrNil {
+		return "", "", nil, err
+	}
+
+	queueParts := strings.SplitN(string(items[0]), ":", 2)
+	channelUUID := models.ChannelUUID(queueParts[0])
+	chatID := models.ChatID(queueParts[1])
+
+	msgs := make([]*models.MsgOut, len(items)-1)
+	for i := 1; i < len(items); i++ {
+		msgs[i-1] = o.decodeMsg(items[i])
+	}
+
+	return channelUUID, chatID, msgs, nil
 }
 
 func (o *Outboxes) PopAll(rc redis.Conn, ch models.Channel, chatID models.ChatID) ([]*models.MsgOut, error) {

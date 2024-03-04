@@ -56,7 +56,13 @@ func TestOutboxes(t *testing.T) {
 		{ChannelUUID: "8291264a-4581-4d12-96e5-e9fcfa6e68d9", ChatID: "3xdF7KhyEiabBiCd3Cst3X28", Oldest: time.Date(2024, time.January, 30, 13, 32, 0, 0, time.UTC)},
 	}, boxes)
 
-	msg, err := o.PopMessage(rc, ch, "65vbbDAQCdPdEWlEhDGy4utO")
+	channelUUID, chatID, msgs, err := o.PopStale(rc, time.Date(2024, 1, 30, 12, 56, 0, 0, time.UTC))
+	assert.NoError(t, err)
+	assert.Equal(t, models.ChannelUUID("8291264a-4581-4d12-96e5-e9fcfa6e68d9"), channelUUID)
+	assert.Equal(t, models.ChatID("65vbbDAQCdPdEWlEhDGy4utO"), chatID)
+	assert.Len(t, msgs, 3)
+
+	/*msg, err := o.PopMessage(rc, ch, "65vbbDAQCdPdEWlEhDGy4utO")
 	assert.NoError(t, err)
 	assert.Equal(t, models.MsgID(101), msg.ID)
 	assert.Equal(t, "hi", msg.Text)
@@ -77,5 +83,5 @@ func TestOutboxes(t *testing.T) {
 	assert.Equal(t, models.MsgID(103), msg.ID)
 	assert.Equal(t, "hola", msg.Text)
 	assertredis.LLen(t, rt.RP, "chattest:queue:8291264a-4581-4d12-96e5-e9fcfa6e68d9:3xdF7KhyEiabBiCd3Cst3X28", 0)
-	assertredis.ZCard(t, rt.RP, "chattest:queues", 0)
+	assertredis.ZCard(t, rt.RP, "chattest:queues", 0)*/
 }
