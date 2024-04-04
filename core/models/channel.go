@@ -10,6 +10,7 @@ import (
 )
 
 type OrgID int
+type ChannelID int64
 type ChannelUUID uuids.UUID
 
 type Channel interface {

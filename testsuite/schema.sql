@@ -63,3 +63,35 @@ CREATE TABLE auth_user (
     is_active boolean NOT NULL,
     is_staff boolean NOT NULL
 );
+
+DROP TABLE IF EXISTS msgs_msg CASCADE;
+CREATE TABLE msgs_msg (
+    id bigserial primary key,
+    uuid uuid NULL,
+    text text NOT NULL,
+    attachments character varying(255)[] NULL,
+    quick_replies character varying(64)[] NULL,
+    locale character varying(6) NULL,
+    high_priority boolean NULL,
+    created_on timestamp with time zone NOT NULL,
+    modified_on timestamp with time zone,
+    sent_on timestamp with time zone,
+    queued_on timestamp with time zone,
+    direction character varying(1) NOT NULL,
+    status character varying(1) NOT NULL,
+    visibility character varying(1) NOT NULL,
+    msg_type character varying(1) NOT NULL,
+    msg_count integer NOT NULL,
+    error_count integer NOT NULL,
+    next_attempt timestamp with time zone NOT NULL,
+    failed_reason character varying(1),
+    external_id character varying(255),
+    channel_id integer references channels_channel(id) on delete cascade,
+    contact_id integer NOT NULL references contacts_contact(id) on delete cascade,
+    contact_urn_id integer NOT NULL references contacts_contacturn(id) on delete cascade,
+    org_id integer NOT NULL references orgs_org(id) on delete cascade,
+    created_by_id integer references auth_user(id) on delete cascade,
+    metadata text,
+    delete_from_counts boolean,
+    log_uuids uuid[]
+);

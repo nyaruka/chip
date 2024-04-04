@@ -32,6 +32,8 @@ func TestContact(t *testing.T) {
 
 	bob, err := models.LoadContact(ctx, rt, channel, "65vbbDAQCdPdEWlEhDGy4utO")
 	assert.NoError(t, err)
+	assert.Equal(t, bobID, bob.ID)
+	assert.Equal(t, orgID, bob.OrgID)
 	assert.Equal(t, models.ChatID("65vbbDAQCdPdEWlEhDGy4utO"), bob.ChatID)
 	assert.Equal(t, "", bob.Email)
 

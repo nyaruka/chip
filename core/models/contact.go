@@ -21,9 +21,10 @@ func NewChatID() ChatID {
 }
 
 type Contact struct {
-	OrgID  OrgID  `json:"org_id"`
-	ChatID ChatID `json:"chat_id"`
-	Email  string `json:"email"`
+	ID     ContactID `json:"id"`
+	OrgID  OrgID     `json:"org_id"`
+	ChatID ChatID    `json:"chat_id"`
+	Email  string    `json:"email"`
 }
 
 func NewContact(ch Channel) *Contact {
@@ -54,7 +55,7 @@ func (c *Contact) UpdateEmail(ctx context.Context, rt *runtime.Runtime, email st
 
 const sqlSelectContact = `
 SELECT row_to_json(r) FROM (
-	SELECT org_id, path AS chat_id, display AS email FROM contacts_contacturn WHERE org_id = $1 AND identity = $2
+	SELECT contact_id AS id, org_id, path AS chat_id, display AS email FROM contacts_contacturn WHERE org_id = $1 AND identity = $2
 ) r`
 
 func LoadContact(ctx context.Context, rt *runtime.Runtime, channel Channel, chatID ChatID) (*Contact, error) {
