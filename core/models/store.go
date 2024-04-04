@@ -31,8 +31,8 @@ func NewStore(rt *runtime.Runtime) Store {
 
 	return &store{
 		rt:       rt,
-		channels: cache.NewLocal[ChannelUUID, Channel](fetchChannel, 30*time.Second),
-		users:    cache.NewLocal[UserID, User](fetchUser, 30*time.Second),
+		channels: cache.NewLocal(fetchChannel, 30*time.Second),
+		users:    cache.NewLocal(fetchUser, 30*time.Second),
 	}
 }
 
