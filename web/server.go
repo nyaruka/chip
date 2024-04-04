@@ -52,8 +52,8 @@ func NewServer(rt *runtime.Runtime, service Service) *Server {
 	router.Use(middleware.RealIP)
 	router.Use(middleware.Recoverer)
 	router.Use(middleware.Timeout(15 * time.Second))
-	router.Post("/start/{channel:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}}", s.channelHandler(s.handleStart))
-	router.Post("/send/{channel:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}}", s.channelHandler(s.handleSend))
+	router.Handle("/start/{channel:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}}", s.channelHandler(s.handleStart))
+	router.Handle("/send/{channel:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}}", s.channelHandler(s.handleSend))
 
 	s.httpServer = &http.Server{
 		Addr:    fmt.Sprintf("%s:%d", rt.Config.Address, rt.Config.Port),
@@ -103,7 +103,7 @@ func (s *Server) Stop() {
 	log.Info("stopped")
 }
 
-func (s *Server) channelHandler(fn func(context.Context, *http.Request, http.ResponseWriter, models.Channel)) func(http.ResponseWriter, *http.Request) {
+func (s *Server) channelHandler(fn func(context.Context, *http.Request, http.ResponseWriter, models.Channel)) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		channelUUID := models.ChannelUUID(r.PathValue("channel"))
 
@@ -138,6 +138,7 @@ func (s *Server) handleStart(ctx context.Context, r *http.Request, w http.Respon
 	// hijack the HTTP connection...
 	sock, err := httpx.NewWebSocket(w, r, 4096, 0)
 	if err != nil {
+		slog.Error("error hijacking connection", "error", err)
 		return
 	}
 
