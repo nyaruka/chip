@@ -61,18 +61,18 @@ SELECT row_to_json(r) FROM (
       FROM msgs_msg 
      WHERE contact_id = $1 AND msg_type = 'T' AND visibility IN ('V', 'A') %s
   ORDER BY created_on DESC, id DESC 
-     LIMIT 50
+     LIMIT %d
 ) r`
 
-func LoadContactMessages(ctx context.Context, rt *runtime.Runtime, contactID ContactID, beforeCreatedOn *time.Time, beforeID MsgID) ([]*Msg, error) {
+func LoadContactMessages(ctx context.Context, rt *runtime.Runtime, contactID ContactID, beforeCreatedOn *time.Time, limit int) ([]*Msg, error) {
 	var q string
 	var params []any
 
-	if beforeCreatedOn != nil && beforeID != NilMsgID {
-		q = fmt.Sprintf(sqlSelectContactMessages, "AND created_on <= $2 AND id < $3")
-		params = []any{contactID, *beforeCreatedOn, beforeID}
+	if beforeCreatedOn != nil {
+		q = fmt.Sprintf(sqlSelectContactMessages, "AND created_on < $2", limit)
+		params = []any{contactID, *beforeCreatedOn}
 	} else {
-		q = fmt.Sprintf(sqlSelectContactMessages, "")
+		q = fmt.Sprintf(sqlSelectContactMessages, "", limit)
 		params = []any{contactID}
 	}
 

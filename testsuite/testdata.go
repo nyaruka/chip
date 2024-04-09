@@ -39,8 +39,8 @@ func InsertContact(rt *runtime.Runtime, orgID models.OrgID, name string) models.
 
 func InsertIncomingMsg(rt *runtime.Runtime, orgID models.OrgID, channelID models.ChannelID, contactID models.ContactID, urnID models.URNID, text string, createdOn time.Time) models.MsgID {
 	row := rt.DB.QueryRow(
-		`INSERT INTO msgs_msg(uuid, org_id, channel_id, contact_id, contact_urn_id, direction, msg_type, status, visibility, text, created_on, next_attempt, msg_count, error_count)
-	  	 VALUES($1, $2, $3, $4, $5, 'I', 'T', 'H', 'V', $6, $7, NOW(), 1, 1) RETURNING id`, uuids.New(), orgID, channelID, contactID, urnID, text, createdOn,
+		`INSERT INTO msgs_msg(uuid, org_id, channel_id, contact_id, contact_urn_id, direction, msg_type, status, visibility, text, created_on, modified_on, next_attempt, msg_count, error_count)
+	  	 VALUES($1, $2, $3, $4, $5, 'I', 'T', 'H', 'V', $6, $7, NOW(), NOW(), 1, 1) RETURNING id`, uuids.New(), orgID, channelID, contactID, urnID, text, createdOn,
 	)
 	var id models.MsgID
 	must(row.Scan(&id))

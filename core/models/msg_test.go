@@ -21,7 +21,7 @@ func TestLoadContactMessages(t *testing.T) {
 	bobID := testsuite.InsertContact(rt, orgID, "Bob")
 	bobURNID := testsuite.InsertURN(rt, orgID, bobID, "webchat:65vbbDAQCdPdEWlEhDGy4utO")
 
-	msgs, err := models.LoadContactMessages(ctx, rt, bobID, nil, models.NilMsgID)
+	msgs, err := models.LoadContactMessages(ctx, rt, bobID, nil, 10)
 	assert.NoError(t, err)
 	assert.Len(t, msgs, 0)
 
@@ -31,45 +31,34 @@ func TestLoadContactMessages(t *testing.T) {
 
 	msg1ID := testsuite.InsertIncomingMsg(rt, orgID, chanID, bobID, bobURNID, "Hello", t1)
 	msg2ID := testsuite.InsertIncomingMsg(rt, orgID, chanID, bobID, bobURNID, "There", t2)
-	msg3ID := testsuite.InsertIncomingMsg(rt, orgID, chanID, bobID, bobURNID, "World", t2)
-	msg4ID := testsuite.InsertIncomingMsg(rt, orgID, chanID, bobID, bobURNID, "!!!", t3)
+	msg3ID := testsuite.InsertIncomingMsg(rt, orgID, chanID, bobID, bobURNID, "World", t3)
 	testsuite.InsertIncomingMsg(rt, orgID, chanID, annID, annURNID, "Hello", time.Date(2024, 4, 5, 17, 12, 45, 123456789, time.UTC))
 
-	msgs, err = models.LoadContactMessages(ctx, rt, bobID, nil, models.NilMsgID)
-	assert.NoError(t, err)
-	if assert.Len(t, msgs, 4) {
-		assert.Equal(t, msg4ID, msgs[0].ID)
-		assert.Equal(t, "!!!", msgs[0].Text)
-		assert.Equal(t, msg3ID, msgs[1].ID)
-		assert.Equal(t, "World", msgs[1].Text)
-		assert.Equal(t, msg2ID, msgs[2].ID)
-		assert.Equal(t, "There", msgs[2].Text)
-		assert.Equal(t, msg1ID, msgs[3].ID)
-		assert.Equal(t, "Hello", msgs[3].Text)
-	}
-
-	msgs, err = models.LoadContactMessages(ctx, rt, bobID, &t3, msg4ID)
+	msgs, err = models.LoadContactMessages(ctx, rt, bobID, nil, 10)
 	assert.NoError(t, err)
 	if assert.Len(t, msgs, 3) {
+		assert.Equal(t, msg3ID, msgs[0].ID)
 		assert.Equal(t, "World", msgs[0].Text)
+		assert.Equal(t, msg2ID, msgs[1].ID)
 		assert.Equal(t, "There", msgs[1].Text)
+		assert.Equal(t, msg1ID, msgs[2].ID)
 		assert.Equal(t, "Hello", msgs[2].Text)
 	}
 
-	msgs, err = models.LoadContactMessages(ctx, rt, bobID, &t2, msg3ID)
+	msgs, err = models.LoadContactMessages(ctx, rt, bobID, &t3, 10)
 	assert.NoError(t, err)
 	if assert.Len(t, msgs, 2) {
 		assert.Equal(t, "There", msgs[0].Text)
 		assert.Equal(t, "Hello", msgs[1].Text)
 	}
 
-	msgs, err = models.LoadContactMessages(ctx, rt, bobID, &t2, msg2ID)
+	msgs, err = models.LoadContactMessages(ctx, rt, bobID, &t3, 1)
 	assert.NoError(t, err)
 	if assert.Len(t, msgs, 1) {
-		assert.Equal(t, "Hello", msgs[0].Text)
+		assert.Equal(t, "There", msgs[0].Text)
 	}
 
-	msgs, err = models.LoadContactMessages(ctx, rt, bobID, &t1, msg1ID)
+	msgs, err = models.LoadContactMessages(ctx, rt, bobID, &t1, 10)
 	assert.NoError(t, err)
 	assert.Len(t, msgs, 0)
 }
