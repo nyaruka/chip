@@ -5,7 +5,6 @@ import (
 
 	"github.com/nyaruka/gocommon/httpx"
 	"github.com/nyaruka/tembachat/core/courier"
-	"github.com/nyaruka/tembachat/core/events"
 	"github.com/nyaruka/tembachat/core/models"
 	"github.com/nyaruka/tembachat/runtime"
 	"github.com/nyaruka/tembachat/testsuite"
@@ -13,7 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestNotify(t *testing.T) {
+func TestCourier(t *testing.T) {
 	ctx, rt := testsuite.Runtime()
 
 	defer testsuite.ResetDB()
@@ -43,15 +42,15 @@ func TestNotify(t *testing.T) {
 	bob, err := models.LoadContact(ctx, rt, channel, "65vbbDAQCdPdEWlEhDGy4utO")
 	require.NoError(t, err)
 
-	err = courier.NotifyMsgIn(cfg, channel, bob, events.NewMsgIn("hello"))
+	err = courier.StartChat(cfg, channel, "65vbbDAQCdPdEWlEhDGy4utO")
 	assert.NoError(t, err)
 	assert.Equal(t, "POST", mocks.Requests()[0].Method)
 
-	err = courier.NotifyChatStarted(cfg, channel, bob)
+	err = courier.CreateMsg(cfg, channel, bob, "hello")
 	assert.NoError(t, err)
 	assert.Equal(t, "POST", mocks.Requests()[1].Method)
 
-	err = courier.NotifyChatStarted(cfg, channel, bob)
+	err = courier.StartChat(cfg, channel, "65vbbDAQCdPdEWlEhDGy4utO")
 	assert.EqualError(t, err, "courier returned non-2XX status")
 
 	assert.False(t, mocks.HasUnused())

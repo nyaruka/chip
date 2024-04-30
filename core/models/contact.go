@@ -2,6 +2,7 @@ package models
 
 import (
 	"context"
+	"database/sql"
 
 	"github.com/nyaruka/gocommon/dbutil"
 	"github.com/nyaruka/gocommon/random"
@@ -72,7 +73,7 @@ func LoadContact(ctx context.Context, rt *runtime.Runtime, channel Channel, chat
 	defer rows.Close()
 
 	if !rows.Next() {
-		return nil, errors.New("contact query returned no rows")
+		return nil, sql.ErrNoRows
 	}
 	c := &Contact{}
 	if err := dbutil.ScanJSON(rows, c); err != nil {

@@ -13,7 +13,6 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/nyaruka/gocommon/httpx"
 	"github.com/nyaruka/gocommon/jsonx"
-	"github.com/nyaruka/tembachat/core/events"
 	"github.com/nyaruka/tembachat/core/models"
 	"github.com/nyaruka/tembachat/runtime"
 	"golang.org/x/exp/maps"
@@ -21,8 +20,6 @@ import (
 
 type Service interface {
 	Store() models.Store
-	OnChatStarted(models.Channel, *models.Contact)
-	OnChatReceive(models.Channel, *models.Contact, events.Event)
 	OnSendRequest(models.Channel, *models.MsgOut)
 }
 
@@ -32,7 +29,7 @@ type Server struct {
 	httpServer *http.Server
 	wg         sync.WaitGroup
 
-	clients     map[models.ChatID]*Client
+	clients     map[string]*Client
 	clientMutex *sync.RWMutex
 }
 
@@ -41,7 +38,7 @@ func NewServer(rt *runtime.Runtime, service Service) *Server {
 		rt:      rt,
 		service: service,
 
-		clients:     make(map[models.ChatID]*Client),
+		clients:     make(map[string]*Client),
 		clientMutex: &sync.RWMutex{},
 	}
 
@@ -52,7 +49,7 @@ func NewServer(rt *runtime.Runtime, service Service) *Server {
 	router.Use(middleware.RealIP)
 	router.Use(middleware.Recoverer)
 	router.Use(middleware.Timeout(15 * time.Second))
-	router.Handle("/start/{channel:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}}", s.channelHandler(s.handleStart))
+	router.Handle("/connect/{channel:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}}", s.channelHandler(s.handleConnect))
 	router.Handle("/send/{channel:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}}", s.channelHandler(s.handleSend))
 
 	s.httpServer = &http.Server{
@@ -117,24 +114,7 @@ func (s *Server) channelHandler(fn func(context.Context, *http.Request, http.Res
 	}
 }
 
-func (s *Server) handleStart(ctx context.Context, r *http.Request, w http.ResponseWriter, ch models.Channel) {
-	chatID := models.ChatID(r.URL.Query().Get("chat_id"))
-
-	// if chat ID was provided, lookup the contact
-	var contact *models.Contact
-	var err error
-	isNew := false
-	if chatID != "" {
-		contact, err = models.LoadContact(ctx, s.rt, ch, chatID)
-		if err != nil {
-			writeErrorResponse(w, http.StatusInternalServerError, "error looking up contact")
-			return
-		}
-	} else {
-		contact = models.NewContact(ch)
-		isNew = true
-	}
-
+func (s *Server) handleConnect(ctx context.Context, r *http.Request, w http.ResponseWriter, ch models.Channel) {
 	// hijack the HTTP connection...
 	sock, err := httpx.NewWebSocket(w, r, 4096, 0)
 	if err != nil {
@@ -142,24 +122,15 @@ func (s *Server) handleStart(ctx context.Context, r *http.Request, w http.Respon
 		return
 	}
 
+	client := NewClient(s, sock, ch)
+
 	s.clientMutex.Lock()
-
-	if _, exists := s.clients[contact.ChatID]; !exists {
-		s.clients[contact.ChatID] = NewClient(s, sock, ch, contact, isNew)
-	} else {
-		sock.Close(1008)
-
-		slog.Info("rejected duplicate connection", "channel", ch.UUID(), "chat_id", contact.ChatID)
-	}
-
+	s.clients[client.clientID] = client
 	total := len(s.clients)
 	s.clientMutex.Unlock()
 	s.wg.Add(1)
-	slog.Info("client connected", "channel", ch.UUID(), "chat_id", contact.ChatID, "total", total)
 
-	if isNew {
-		s.service.OnChatStarted(ch, contact)
-	}
+	slog.Info("client connected", "channel", ch.UUID(), "client_id", client.clientID, "total", total)
 }
 
 type sendRequest struct {
@@ -205,18 +176,24 @@ func (s *Server) GetClient(chatID models.ChatID) *Client {
 	defer s.clientMutex.RUnlock()
 
 	s.clientMutex.RLock()
-	return s.clients[chatID]
+
+	// TODO maintain map by contact ?
+	for _, c := range s.clients {
+		if c.chatID() == chatID {
+			return c
+		}
+	}
+	return nil
 }
 
 func (s *Server) OnDisconnect(c *Client) {
 	s.clientMutex.Lock()
-	delete(s.clients, c.contact.ChatID)
+	delete(s.clients, c.clientID)
 	total := len(s.clients)
 	s.clientMutex.Unlock()
-
 	s.wg.Done()
 
-	slog.Info("client disconnected", "channel", c.channel.UUID(), "chat_id", c.contact.ChatID, "total", total)
+	slog.Info("client disconnected", "total", total)
 }
 
 func writeErrorResponse(w http.ResponseWriter, status int, msg string) {
