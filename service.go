@@ -78,7 +78,6 @@ func (s *Service) Stop() {
 	s.senderWait.Wait()
 
 	s.server.Stop()
-
 	s.store.Close()
 
 	log.Info("stopped")
@@ -102,7 +101,7 @@ func (s *Service) sender() {
 
 	for {
 		// TODO panic recovery
-		s.send()
+		// s.send()
 
 		select {
 		case <-s.senderStop:
