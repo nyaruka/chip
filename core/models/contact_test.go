@@ -28,7 +28,7 @@ func TestContact(t *testing.T) {
 
 	// try loading from non-existent chat ID
 	_, err = models.LoadContact(ctx, rt, channel, "123456789012345678901234")
-	assert.EqualError(t, err, "contact query returned no rows")
+	assert.EqualError(t, err, "sql: no rows in result set")
 
 	bob, err := models.LoadContact(ctx, rt, channel, "65vbbDAQCdPdEWlEhDGy4utO")
 	assert.NoError(t, err)
