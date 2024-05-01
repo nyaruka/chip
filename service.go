@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/nyaruka/redisx"
-	"github.com/nyaruka/tembachat/core/courier"
 	"github.com/nyaruka/tembachat/core/events"
 	"github.com/nyaruka/tembachat/core/models"
 	"github.com/nyaruka/tembachat/core/queue"
@@ -87,32 +86,6 @@ func (s *Service) Stop() {
 
 func (s *Service) Store() models.Store { return s.store }
 
-func (s *Service) OnChatStarted(channel models.Channel, contact *models.Contact) {
-	log := slog.With("comp", "service")
-
-	if err := courier.NotifyChatStarted(s.rt.Config, channel, contact); err != nil {
-		log.Error("error notifying courier", "error", err)
-	}
-}
-
-func (s *Service) OnChatReceive(channel models.Channel, contact *models.Contact, e events.Event) {
-	log := slog.With("comp", "service")
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-
-	switch typed := e.(type) {
-	case *events.MsgIn:
-		if err := courier.NotifyMsgIn(s.rt.Config, channel, contact, typed); err != nil {
-			log.Error("error notifying courier", "error", err)
-		}
-
-	case *events.EmailAdded:
-		if err := contact.UpdateEmail(ctx, s.rt, typed.Email); err != nil {
-			log.Error("error updating email", "error", err)
-		}
-	}
-}
-
 func (s *Service) OnSendRequest(channel models.Channel, msg *models.MsgOut) {
 	log := slog.With("comp", "service")
 	rc := s.rt.RP.Get()
@@ -176,7 +149,7 @@ func (s *Service) send() {
 
 		client := s.server.GetClient(box.ChatID)
 
-		if client != nil && client.CanSend() {
+		if client != nil /*&& client.CanSend()*/ {
 			msg, err := s.outboxes.PopMessage(rc, ch, box.ChatID)
 			if err != nil {
 				log.Error("error popping message from outbox", "error", err)

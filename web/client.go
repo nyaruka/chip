@@ -1,16 +1,24 @@
 package web
 
 import (
+	"context"
+	"database/sql"
 	"log/slog"
 	"sync"
+	"time"
 
 	"github.com/nyaruka/gocommon/httpx"
 	"github.com/nyaruka/gocommon/jsonx"
+	"github.com/nyaruka/gocommon/uuids"
+	"github.com/nyaruka/tembachat/core/courier"
 	"github.com/nyaruka/tembachat/core/events"
 	"github.com/nyaruka/tembachat/core/models"
+	"github.com/nyaruka/tembachat/web/commands"
+	"github.com/pkg/errors"
 )
 
 type Client struct {
+	id      string
 	server  *Server
 	socket  httpx.WebSocket
 	channel models.Channel
@@ -21,14 +29,14 @@ type Client struct {
 	sendWait sync.WaitGroup
 }
 
-func NewClient(s *Server, sock httpx.WebSocket, channel models.Channel, contact *models.Contact, isNew bool) *Client {
+func NewClient(s *Server, sock httpx.WebSocket, channel models.Channel) *Client {
 	c := &Client{
+		id:      string(uuids.New()),
 		server:  s,
 		socket:  sock,
 		channel: channel,
-		contact: contact,
 
-		send:     make(chan events.Event, 1), // allow buffering of one outgoing event at most
+		send:     make(chan events.Event, 16),
 		sendStop: make(chan bool),
 	}
 
@@ -38,33 +46,99 @@ func NewClient(s *Server, sock httpx.WebSocket, channel models.Channel, contact 
 
 	go c.sender()
 
-	if isNew {
-		c.Send(events.NewChatStarted(contact.ChatID))
-	} else {
-		c.Send(events.NewChatResumed(contact.ChatID, contact.Email))
-	}
-
 	return c
 }
 
 func (c *Client) onMessage(msg []byte) {
-	evt, err := events.ReadEvent(msg)
+	log := c.log()
+
+	cmd, err := commands.ReadCommand(msg)
 	if err != nil {
-		slog.Error("unable to unmarshal event", "chat_id", c.contact.ChatID, "error", err)
-	} else {
-		c.server.service.OnChatReceive(c.channel, c.contact, evt)
+		log.Error("unable to unmarshal command", "error", err)
+		return
+	}
+
+	if err = c.onCommand(cmd); err != nil {
+		log.Error("error handling command", "command", cmd.Type(), "error", err)
 	}
 }
 
+func (c *Client) onCommand(cmd commands.Command) error {
+	log := c.log()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	switch typed := cmd.(type) {
+	case *commands.StartChat:
+		if c.contact != nil {
+			log.Debug("chat already started")
+			return nil
+		}
+
+		// if client provided a chat ID look for a matching contact
+		if typed.ChatID != "" {
+			contact, err := models.LoadContact(ctx, c.server.rt, c.channel, typed.ChatID)
+			if err != nil && err != sql.ErrNoRows {
+				return errors.Wrap(err, "error looking up contact")
+			}
+
+			if contact != nil {
+				c.contact = contact
+				c.Send(events.NewChatResumed(contact.ChatID, contact.Email))
+				return nil
+			}
+		}
+
+		// if not generate a new random chat id
+		chatID := models.NewChatID()
+
+		// and have courier create a contact and trigger a new_conversation event
+		if err := courier.StartChat(c.server.rt.Config, c.channel, chatID); err != nil {
+			return errors.Wrap(err, "error notifying courier")
+		}
+
+		// contact should now exist now...
+		contact, err := models.LoadContact(ctx, c.server.rt, c.channel, chatID)
+		if err != nil {
+			return errors.Wrap(err, "error looking up new contact")
+		}
+
+		c.contact = contact
+		c.Send(events.NewChatStarted(contact.ChatID))
+
+	case *commands.CreateMsg:
+		if c.contact == nil {
+			log.Debug("chat not started, msg event ignored")
+			return nil
+		}
+
+		if err := courier.CreateMsg(c.server.rt.Config, c.channel, c.contact, typed.Text); err != nil {
+			return errors.Wrap(err, "error notifying courier")
+		}
+
+	case *commands.SetEmail:
+		if c.contact == nil {
+			log.Debug("chat not started, set email event ignored")
+			return nil
+		}
+
+		if err := c.contact.UpdateEmail(ctx, c.server.rt, typed.Email); err != nil {
+			return errors.Wrap(err, "error updating email")
+		}
+	default:
+		log.Debug("unknown command", "type", cmd.Type())
+	}
+
+	return nil
+}
+
 func (c *Client) onClose(code int) {
+	c.log().Info("closing", "code", code)
+
 	c.server.OnDisconnect(c)
 
 	c.sendStop <- true
-}
-
-// CanSend returns whether Send can be called without blocking.
-func (c *Client) CanSend() bool {
-	return len(c.send) == 0
 }
 
 func (c *Client) Send(e events.Event) {
@@ -89,4 +163,15 @@ func (c *Client) sender() {
 			return
 		}
 	}
+}
+
+func (c *Client) chatID() models.ChatID {
+	if c.contact != nil {
+		return c.contact.ChatID
+	}
+	return ""
+}
+
+func (c *Client) log() *slog.Logger {
+	return slog.With("client_id", c.id, "channel", c.channel.UUID(), "chat_id", c.chatID())
 }

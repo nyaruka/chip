@@ -7,7 +7,7 @@ Webchat server that talks to [Courier](https://github.com/nyaruka/courier/).
 To start chat session as new user:
 
 ```javascript
-sock = new WebSocket("ws://localhost:8070/start/a204047b-5224-4b8b-a328-08a538f1b3cb/");
+sock = new WebSocket("ws://localhost:8070/connect/7d62d551-3030-4100-a260-2d7c4e9693e7/");
 
 sock.onclose = function (event) {
     console.log("bye!");
@@ -17,9 +17,17 @@ sock.onmessage = function (event) {
 };
 ```
 
-## Server Events
+## Client Commands
 
-The first message the client will receive will contain the new chat ID: 
+### `start_chat`
+
+Can be used to start a new chat session as a new contact:
+
+```json
+{
+    "type": "start_chat"
+}
+```
 
 ```json
 {
@@ -28,13 +36,14 @@ The first message the client will receive will contain the new chat ID:
 }
 ```
 
-The client can store that identifier to reconnect as the same contact in future. Pass it as a param to the start endpoint:
+Or resume a chat session as an existing contact:
 
-```javascript
-sock = new WebSocket("ws://localhost:8070/start/a204047b-5224-4b8b-a328-08a538f1b3cb/?chat_id=65vbbDAQCdPdEWlEhDGy4utO")
+```json
+{
+    "type": "start_chat",
+    "chat_id": "65vbbDAQCdPdEWlEhDGy4utO"
+}
 ```
-
-And in this case the first message the client will receive will be:
 
 ```json
 {
@@ -44,33 +53,24 @@ And in this case the first message the client will receive will be:
 }
 ```
 
-Messages from courier are sent to the client as events that look like:
+### `create_msg`
+
+Creates a new message from the client:
 
 ```json
 {
-    "type": "msg_out",
-    "text": "Hello there!",
-    "origin": "flow"
+    "type": "create_msg",
+    "text": "I need help!"
 }
 ```
 
-## Client Events
+### `set_email`
 
-To send a message from the client, send a `msg_in` event to the socket, e.g.
-
-```json
-{
-    "type": "msg_in", 
-    "text": "Thanks!"
-}
-```
-
-The client can collect an email address by sending a `email_added` event, e.g.
+Updates the email address for the current contact:
 
 ```json
 {
-    "type": "email_added", 
+    "type": "set_email",
     "email": "bob@nyaruka.com"
 }
 ```
-
