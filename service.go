@@ -102,7 +102,7 @@ func (s *Service) sender() {
 
 	for {
 		// TODO panic recovery
-		// s.send()
+		s.send()
 
 		select {
 		case <-s.senderStop:

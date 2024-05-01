@@ -18,11 +18,11 @@ import (
 )
 
 type Client struct {
-	clientID string
-	server   *Server
-	socket   httpx.WebSocket
-	channel  models.Channel
-	contact  *models.Contact
+	id      string
+	server  *Server
+	socket  httpx.WebSocket
+	channel models.Channel
+	contact *models.Contact
 
 	send     chan events.Event
 	sendStop chan bool
@@ -31,10 +31,10 @@ type Client struct {
 
 func NewClient(s *Server, sock httpx.WebSocket, channel models.Channel) *Client {
 	c := &Client{
-		clientID: string(uuids.New()),
-		server:   s,
-		socket:   sock,
-		channel:  channel,
+		id:      string(uuids.New()),
+		server:  s,
+		socket:  sock,
+		channel: channel,
 
 		send:     make(chan events.Event, 16),
 		sendStop: make(chan bool),
@@ -47,10 +47,6 @@ func NewClient(s *Server, sock httpx.WebSocket, channel models.Channel) *Client 
 	go c.sender()
 
 	return c
-}
-
-func (c *Client) Channel() models.Channel {
-	return c.channel
 }
 
 func (c *Client) onMessage(msg []byte) {
@@ -130,6 +126,8 @@ func (c *Client) onCommand(cmd commands.Command) error {
 		if err := c.contact.UpdateEmail(ctx, c.server.rt, typed.Email); err != nil {
 			return errors.Wrap(err, "error updating email")
 		}
+	default:
+		log.Debug("unknown command", "type", cmd.Type())
 	}
 
 	return nil
@@ -175,5 +173,5 @@ func (c *Client) chatID() models.ChatID {
 }
 
 func (c *Client) log() *slog.Logger {
-	return slog.With("client_id", c.clientID, "channel", c.channel.UUID(), "chat_id", c.chatID())
+	return slog.With("client_id", c.id, "channel", c.channel.UUID(), "chat_id", c.chatID())
 }

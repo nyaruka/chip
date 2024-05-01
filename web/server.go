@@ -125,12 +125,12 @@ func (s *Server) handleConnect(ctx context.Context, r *http.Request, w http.Resp
 	client := NewClient(s, sock, ch)
 
 	s.clientMutex.Lock()
-	s.clients[client.clientID] = client
+	s.clients[client.id] = client
 	total := len(s.clients)
 	s.clientMutex.Unlock()
 	s.wg.Add(1)
 
-	slog.Info("client connected", "channel", ch.UUID(), "client_id", client.clientID, "total", total)
+	slog.Info("client connected", "channel", ch.UUID(), "client_id", client.id, "total", total)
 }
 
 type sendRequest struct {
@@ -188,7 +188,7 @@ func (s *Server) GetClient(chatID models.ChatID) *Client {
 
 func (s *Server) OnDisconnect(c *Client) {
 	s.clientMutex.Lock()
-	delete(s.clients, c.clientID)
+	delete(s.clients, c.id)
 	total := len(s.clients)
 	s.clientMutex.Unlock()
 	s.wg.Done()
