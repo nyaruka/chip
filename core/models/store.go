@@ -2,6 +2,7 @@ package models
 
 import (
 	"context"
+	"log/slog"
 	"time"
 
 	"github.com/nyaruka/gocommon/cache"
@@ -9,9 +10,10 @@ import (
 )
 
 type Store interface {
+	Start()
+	Stop()
 	GetChannel(context.Context, ChannelUUID) (Channel, error)
 	GetUser(context.Context, UserID) (User, error)
-	Close()
 }
 
 // implementation of Store using cached database lookups
@@ -36,15 +38,24 @@ func NewStore(rt *runtime.Runtime) Store {
 	}
 }
 
+func (s *store) Start() {
+	s.channels.Start()
+	s.users.Start()
+
+	slog.With("comp", "store").Info("started")
+}
+
+func (s *store) Stop() {
+	s.channels.Stop()
+	s.users.Stop()
+
+	slog.With("comp", "store").Info("stopped")
+}
+
 func (s *store) GetChannel(ctx context.Context, uuid ChannelUUID) (Channel, error) {
 	return s.channels.GetOrFetch(ctx, uuid)
 }
 
 func (s *store) GetUser(ctx context.Context, id UserID) (User, error) {
 	return s.users.GetOrFetch(ctx, id)
-}
-
-func (s *store) Close() {
-	s.channels.Stop()
-	s.users.Stop()
 }

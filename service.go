@@ -64,6 +64,7 @@ func (s *Service) Start() error {
 	}
 
 	s.server.Start()
+	s.store.Start()
 
 	go s.sender()
 
@@ -79,8 +80,7 @@ func (s *Service) Stop() {
 	s.senderWait.Wait()
 
 	s.server.Stop()
-
-	s.store.Close()
+	s.store.Stop()
 
 	log.Info("stopped")
 }
