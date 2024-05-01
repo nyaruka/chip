@@ -29,13 +29,6 @@ Can be used to start a new chat session as a new contact:
 }
 ```
 
-```json
-{
-    "type": "chat_started",
-    "chat_id": "65vbbDAQCdPdEWlEhDGy4utO"
-}
-```
-
 Or resume a chat session as an existing contact:
 
 ```json
@@ -45,21 +38,16 @@ Or resume a chat session as an existing contact:
 }
 ```
 
-```json
-{
-    "type": "chat_resumed",
-    "chat_id": "65vbbDAQCdPdEWlEhDGy4utO",
-    "email": ""
-}
-```
+Server will respond with a `chat_started` or `chat_resumed` event depending on whether the provided chat ID matches an
+existing contact.
 
-### `create_msg`
+### `send_msg`
 
-Creates a new message from the client:
+Creates a new incoming message from the client:
 
 ```json
 {
-    "type": "create_msg",
+    "type": "send_msg",
     "text": "I need help!"
 }
 ```
@@ -72,5 +60,51 @@ Updates the email address for the current contact:
 {
     "type": "set_email",
     "email": "bob@nyaruka.com"
+}
+```
+
+## Client Events
+
+### `chat_started`
+
+A chat session for a new contact has been successfully started:
+
+```json
+{
+    "type": "chat_started",
+    "chat_id": "65vbbDAQCdPdEWlEhDGy4utO"
+}
+```
+
+### `chat_resumed`
+
+A chat session for an existing contact has been successfully resumed:
+
+```json
+{
+    "type": "chat_resumed",
+    "chat_id": "65vbbDAQCdPdEWlEhDGy4utO",
+    "email": "bob@nyaruka.com"
+}
+```
+
+### `msg_created`
+
+A new outgoing message has been created and should be displayed in the client:
+
+```json
+{
+    "type": "msg_created",
+    "text": "Thanks for contacting us!",
+    "origin": "flow"
+}
+```
+
+```json
+{
+    "type": "msg_created",
+    "text": "How can we help?",
+    "origin": "chat",
+    "origin": "bob@nyaruka.com"
 }
 ```

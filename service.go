@@ -7,11 +7,11 @@ import (
 	"time"
 
 	"github.com/nyaruka/redisx"
-	"github.com/nyaruka/tembachat/core/events"
 	"github.com/nyaruka/tembachat/core/models"
 	"github.com/nyaruka/tembachat/core/queue"
 	"github.com/nyaruka/tembachat/runtime"
 	"github.com/nyaruka/tembachat/web"
+	"github.com/nyaruka/tembachat/web/events"
 	"github.com/pkg/errors"
 )
 
@@ -162,7 +162,7 @@ func (s *Service) send() {
 					}
 				}
 
-				client.Send(events.NewMsgOut(msg.Text, msg.Origin, user))
+				client.Send(events.NewMsgCreated(msg.Text, msg.Origin, user))
 			}
 		}
 	}

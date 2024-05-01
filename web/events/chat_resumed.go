@@ -2,14 +2,11 @@ package events
 
 import "github.com/nyaruka/tembachat/core/models"
 
-func init() {
-	registerType(TypeChatResumed, func() Event { return &ChatResumed{} })
-}
-
 const TypeChatResumed string = "chat_resumed"
 
 type ChatResumed struct {
 	baseEvent
+
 	ChatID models.ChatID `json:"chat_id"`
 	Email  string        `json:"email"`
 }

@@ -13,7 +13,3 @@ type StartChat struct {
 
 	ChatID models.ChatID `json:"chat_id"`
 }
-
-func NewStartChat() *StartChat {
-	return &StartChat{}
-}

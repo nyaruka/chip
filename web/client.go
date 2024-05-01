@@ -11,9 +11,9 @@ import (
 	"github.com/nyaruka/gocommon/jsonx"
 	"github.com/nyaruka/gocommon/uuids"
 	"github.com/nyaruka/tembachat/core/courier"
-	"github.com/nyaruka/tembachat/core/events"
 	"github.com/nyaruka/tembachat/core/models"
 	"github.com/nyaruka/tembachat/web/commands"
+	"github.com/nyaruka/tembachat/web/events"
 	"github.com/pkg/errors"
 )
 
@@ -64,7 +64,7 @@ func (c *Client) onMessage(msg []byte) {
 }
 
 func (c *Client) onCommand(cmd commands.Command) error {
-	log := c.log()
+	log := c.log().With("command", cmd.Type())
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
@@ -72,7 +72,7 @@ func (c *Client) onCommand(cmd commands.Command) error {
 	switch typed := cmd.(type) {
 	case *commands.StartChat:
 		if c.contact != nil {
-			log.Debug("chat already started")
+			log.Debug("chat already started, command ignored")
 			return nil
 		}
 
@@ -107,9 +107,9 @@ func (c *Client) onCommand(cmd commands.Command) error {
 		c.contact = contact
 		c.Send(events.NewChatStarted(contact.ChatID))
 
-	case *commands.CreateMsg:
+	case *commands.SendMsg:
 		if c.contact == nil {
-			log.Debug("chat not started, msg event ignored")
+			log.Debug("chat not started, command ignored")
 			return nil
 		}
 
@@ -119,15 +119,13 @@ func (c *Client) onCommand(cmd commands.Command) error {
 
 	case *commands.SetEmail:
 		if c.contact == nil {
-			log.Debug("chat not started, set email event ignored")
+			log.Debug("chat not started, command ignored")
 			return nil
 		}
 
 		if err := c.contact.UpdateEmail(ctx, c.server.rt, typed.Email); err != nil {
 			return errors.Wrap(err, "error updating email")
 		}
-	default:
-		log.Debug("unknown command", "type", cmd.Type())
 	}
 
 	return nil

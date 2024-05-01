@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	"github.com/nyaruka/gocommon/httpx"
-	"github.com/nyaruka/tembachat/core/events"
 	"github.com/nyaruka/tembachat/core/models"
 	"github.com/nyaruka/tembachat/testsuite"
 	"github.com/nyaruka/tembachat/web"
@@ -16,10 +15,8 @@ type MockService struct {
 	store models.Store
 }
 
-func (s *MockService) Store() models.Store                                         { return s.store }
-func (s *MockService) OnChatStarted(models.Channel, *models.Contact)               {}
-func (s *MockService) OnChatReceive(models.Channel, *models.Contact, events.Event) {}
-func (s *MockService) OnSendRequest(models.Channel, *models.MsgOut)                {}
+func (s *MockService) Store() models.Store                          { return s.store }
+func (s *MockService) OnSendRequest(models.Channel, *models.MsgOut) {}
 
 func TestServer(t *testing.T) {
 	_, rt := testsuite.Runtime()
