@@ -52,6 +52,25 @@ Creates a new incoming message from the client:
 }
 ```
 
+### `get_history`
+
+Requests message history for the current contact:
+
+```json
+{
+    "type": "get_history"
+}
+```
+
+```json
+{
+    "type": "get_history",
+    "before": "2024-05-01T17:15:30.123456Z"
+}
+```
+
+Server will repond with a `history` event.
+
 ### `set_email`
 
 Updates the email address for the current contact:
@@ -72,6 +91,7 @@ A chat session for a new contact has been successfully started:
 ```json
 {
     "type": "chat_started",
+    "time": "2024-05-01T17:15:30.123456Z",
     "chat_id": "65vbbDAQCdPdEWlEhDGy4utO"
 }
 ```
@@ -83,18 +103,21 @@ A chat session for an existing contact has been successfully resumed:
 ```json
 {
     "type": "chat_resumed",
+    "time": "2024-05-01T17:15:30.123456Z",
     "chat_id": "65vbbDAQCdPdEWlEhDGy4utO",
     "email": "bob@nyaruka.com"
 }
 ```
 
-### `msg_created`
+### `msg_out`
 
 A new outgoing message has been created and should be displayed in the client:
 
 ```json
 {
-    "type": "msg_created",
+    "type": "msg_out",
+    "time": "2024-05-01T17:15:30.123456Z",
+    "msg_id": 34634,
     "text": "Thanks for contacting us!",
     "origin": "flow"
 }
@@ -102,9 +125,37 @@ A new outgoing message has been created and should be displayed in the client:
 
 ```json
 {
-    "type": "msg_created",
+    "type": "msg_out",
+    "time": "2024-05-01T17:15:30.123456Z",
+    "msg_id": 34634,
     "text": "How can we help?",
     "origin": "chat",
-    "origin": "bob@nyaruka.com"
+    "user": {"name": "Bob McTickets", "email": "bob@nyaruka.com"}
+}
+```
+
+### `history`
+
+The client previously requested history with a `get_history` command:
+
+```json
+{
+    "type": "history",
+    "time": "2024-05-01T17:15:30.123456Z",
+    "history": [
+        {
+            "type": "msg_in",
+            "time": "2024-04-01T13:15:30.123456Z",
+            "msg_id": 34632,
+            "text": "I need help!"
+        },
+        {
+            "type": "msg_out",
+            "time": "2024-04-01T13:15:30.123456Z",
+            "msg_id": 34634,
+            "text": "Thanks for contacting us!",
+            "origin": "flow"
+        }
+    ]
 }
 ```

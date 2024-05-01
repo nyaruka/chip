@@ -7,6 +7,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/nyaruka/gocommon/dates"
 	"github.com/nyaruka/gocommon/httpx"
 	"github.com/nyaruka/gocommon/jsonx"
 	"github.com/nyaruka/gocommon/uuids"
@@ -85,7 +86,7 @@ func (c *Client) onCommand(cmd commands.Command) error {
 
 			if contact != nil {
 				c.contact = contact
-				c.Send(events.NewChatResumed(contact.ChatID, contact.Email))
+				c.Send(events.NewChatResumed(dates.Now(), contact.ChatID, contact.Email))
 				return nil
 			}
 		}
@@ -105,7 +106,7 @@ func (c *Client) onCommand(cmd commands.Command) error {
 		}
 
 		c.contact = contact
-		c.Send(events.NewChatStarted(contact.ChatID))
+		c.Send(events.NewChatStarted(dates.Now(), contact.ChatID))
 
 	case *commands.SendMsg:
 		if c.contact == nil {
@@ -116,6 +117,30 @@ func (c *Client) onCommand(cmd commands.Command) error {
 		if err := courier.CreateMsg(c.server.rt.Config, c.channel, c.contact, typed.Text); err != nil {
 			return errors.Wrap(err, "error notifying courier")
 		}
+
+	case *commands.GetHistory:
+		if c.contact == nil {
+			log.Debug("chat not started, command ignored")
+			return nil
+		}
+
+		msgs, err := models.LoadContactMessages(ctx, c.server.rt, c.contact.ID, typed.Before, 10)
+		if err != nil {
+			return errors.Wrap(err, "error loading contact messages")
+
+		}
+
+		history := make([]events.Event, len(msgs))
+		for i, m := range msgs {
+			if m.Direction == models.DirectionOut {
+				// TODO get user
+				history[i] = events.NewMsgOut(m.CreatedOn, m.ID, m.Text, m.Origin(), nil)
+			} else {
+				history[i] = events.NewMsgIn(m.CreatedOn, m.ID, m.Text)
+			}
+		}
+
+		c.Send(events.NewHistory(dates.Now(), history))
 
 	case *commands.SetEmail:
 		if c.contact == nil {
