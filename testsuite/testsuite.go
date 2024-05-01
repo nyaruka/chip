@@ -12,17 +12,25 @@ import (
 	"github.com/nyaruka/tembachat/runtime"
 )
 
+const (
+	dbURL = "postgres://chatserver_test:temba@localhost/chatserver_test?sslmode=disable&Timezone=UTC"
+)
+
 var _db *sql.DB
+
+func Config() *runtime.Config {
+	cfg := runtime.NewDefaultConfig()
+	cfg.DB = dbURL
+	return cfg
+}
 
 // Runtime returns the various runtime things a test might need
 func Runtime() (context.Context, *runtime.Runtime) {
-	cfg := runtime.NewDefaultConfig()
-
 	dbx := getDB()
 	rt := &runtime.Runtime{
 		DB:     dbx,
 		RP:     getRP(),
-		Config: cfg,
+		Config: Config(),
 	}
 
 	slog.SetDefault(slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug})))
@@ -34,7 +42,7 @@ func Runtime() (context.Context, *runtime.Runtime) {
 func getDB() *sql.DB {
 	if _db == nil {
 		var err error
-		_db, err = sql.Open("postgres", "postgres://chatserver_test:temba@localhost/chatserver_test?sslmode=disable&Timezone=UTC")
+		_db, err = sql.Open("postgres", dbURL)
 		noError(err)
 
 		// check if we have tables and if not load test database dump
