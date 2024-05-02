@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/nyaruka/redisx"
+	"github.com/nyaruka/tembachat/core/courier"
 	"github.com/nyaruka/tembachat/core/models"
 	"github.com/nyaruka/tembachat/core/queue"
 	"github.com/nyaruka/tembachat/runtime"
@@ -24,6 +25,7 @@ type Service struct {
 	server   *web.Server
 	store    models.Store
 	outboxes *queue.Outboxes
+	courier  courier.Courier
 
 	senderStop chan bool
 	senderWait sync.WaitGroup
@@ -84,7 +86,8 @@ func (s *Service) Stop() {
 	log.Info("stopped")
 }
 
-func (s *Service) Store() models.Store { return s.store }
+func (s *Service) Store() models.Store      { return s.store }
+func (s *Service) Courier() courier.Courier { return s.courier }
 
 func (s *Service) OnSendRequest(channel *models.Channel, msg *models.MsgOut) {
 	log := slog.With("comp", "service")

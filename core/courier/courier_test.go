@@ -27,9 +27,7 @@ func TestCourier(t *testing.T) {
 	})
 	httpx.SetRequestor(mocks)
 
-	cfg := &runtime.Config{
-		Courier: "http://courier.com",
-	}
+	c := courier.NewCourier(&runtime.Config{Courier: "http://courier.com"})
 
 	orgID := testsuite.InsertOrg(rt, "Nyaruka")
 	testsuite.InsertChannel(rt, "8291264a-4581-4d12-96e5-e9fcfa6e68d9", orgID, "TWC", "WebChat", "123", []string{"webchat"})
@@ -39,18 +37,18 @@ func TestCourier(t *testing.T) {
 	channel, err := models.LoadChannel(ctx, rt, "8291264a-4581-4d12-96e5-e9fcfa6e68d9")
 	require.NoError(t, err)
 
-	bob, err := models.LoadContact(ctx, rt, channel, "65vbbDAQCdPdEWlEhDGy4utO")
+	bob, err := models.LoadContact(ctx, rt, orgID, "65vbbDAQCdPdEWlEhDGy4utO")
 	require.NoError(t, err)
 
-	err = courier.StartChat(cfg, channel, "65vbbDAQCdPdEWlEhDGy4utO")
+	err = c.StartChat(channel, "65vbbDAQCdPdEWlEhDGy4utO")
 	assert.NoError(t, err)
 	assert.Equal(t, "POST", mocks.Requests()[0].Method)
 
-	err = courier.CreateMsg(cfg, channel, bob, "hello")
+	err = c.CreateMsg(channel, bob, "hello")
 	assert.NoError(t, err)
 	assert.Equal(t, "POST", mocks.Requests()[1].Method)
 
-	err = courier.StartChat(cfg, channel, "65vbbDAQCdPdEWlEhDGy4utO")
+	err = c.StartChat(channel, "65vbbDAQCdPdEWlEhDGy4utO")
 	assert.EqualError(t, err, "courier returned non-2XX status")
 
 	assert.False(t, mocks.HasUnused())

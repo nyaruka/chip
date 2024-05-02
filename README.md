@@ -58,12 +58,6 @@ Requests message history for the current contact:
 
 ```json
 {
-    "type": "get_history"
-}
-```
-
-```json
-{
     "type": "get_history",
     "before": "2024-05-01T17:15:30.123456Z"
 }
