@@ -3,25 +3,42 @@ package web_test
 import (
 	"net/http"
 	"testing"
+	"time"
 
+	"github.com/gorilla/websocket"
+	"github.com/nyaruka/gocommon/dates"
 	"github.com/nyaruka/gocommon/httpx"
+	"github.com/nyaruka/gocommon/random"
+	"github.com/nyaruka/tembachat/core/courier"
 	"github.com/nyaruka/tembachat/core/models"
 	"github.com/nyaruka/tembachat/testsuite"
 	"github.com/nyaruka/tembachat/web"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 type MockService struct {
-	store models.Store
+	store   models.Store
+	courier courier.Courier
 }
 
 func (s *MockService) Store() models.Store                           { return s.store }
+func (s *MockService) Courier() courier.Courier                      { return s.courier }
 func (s *MockService) OnSendRequest(*models.Channel, *models.MsgOut) {}
 
 func TestServer(t *testing.T) {
-	_, rt := testsuite.Runtime()
+	ctx, rt := testsuite.Runtime()
 
-	mockSvc := &MockService{store: models.NewStore(rt)}
+	defer testsuite.ResetDB()
+
+	defer random.SetGenerator(random.DefaultGenerator)
+	random.SetGenerator(random.NewSeededGenerator(1234))
+
+	defer dates.SetNowSource(dates.DefaultNowSource)
+	dates.SetNowSource(dates.NewSequentialNowSource(time.Date(2024, 5, 2, 16, 5, 4, 0, time.UTC)))
+
+	mockCourier := testsuite.NewMockCourier(rt)
+	mockSvc := &MockService{store: models.NewStore(rt), courier: mockCourier}
 
 	server := web.NewServer(rt, mockSvc)
 	server.Start()
@@ -37,10 +54,50 @@ func TestServer(t *testing.T) {
 	assert.Equal(t, 400, trace.Response.StatusCode)
 	assert.Equal(t, `{"error":"no such channel"}`, string(trace.ResponseBody))
 
-	// try to start against an existing channel (still fails because client does support web sockets)
+	// try to start against an existing channel (still fails because HTTP client does support web sockets)
 	req, _ = http.NewRequest("POST", "http://localhost:8070/connect/8291264a-4581-4d12-96e5-e9fcfa6e68d9/", nil)
 	trace, err = httpx.DoTrace(http.DefaultClient, req, nil, nil, -1)
 	assert.NoError(t, err)
 	assert.Equal(t, 400, trace.Response.StatusCode)
 	assert.Equal(t, "Bad Request\n", string(trace.ResponseBody))
+
+	c, _, err := websocket.DefaultDialer.Dial("ws://localhost:8070/connect/8291264a-4581-4d12-96e5-e9fcfa6e68d9/", nil)
+	require.NoError(t, err)
+	require.NotNil(t, c)
+
+	defer c.Close()
+
+	send := func(m string) {
+		err := c.WriteMessage(websocket.TextMessage, []byte(m))
+		assert.NoError(t, err)
+
+		time.Sleep(100 * time.Millisecond)
+	}
+
+	send(`{"type": "start_chat"}`)
+
+	contact, err := models.LoadContact(ctx, rt, orgID, "itlu4O6ZE4ZZc07Y5rHxcLoQ")
+	assert.NoError(t, err)
+	assert.NotNil(t, contact)
+
+	assert.Equal(t, []string{"StartChat(8291264a-4581-4d12-96e5-e9fcfa6e68d9, itlu4O6ZE4ZZc07Y5rHxcLoQ)"}, mockCourier.Calls)
+
+	// server should have sent a chat_started event back to the client
+	_, d, err := c.ReadMessage()
+	assert.NoError(t, err)
+	assert.JSONEq(t, `{"type":"chat_started","time":"2024-05-02T16:05:08Z","chat_id":"itlu4O6ZE4ZZc07Y5rHxcLoQ"}`, string(d))
+
+	send(`{"type": "send_msg", "text": "hello"}`)
+
+	assert.Equal(t, []string{
+		"StartChat(8291264a-4581-4d12-96e5-e9fcfa6e68d9, itlu4O6ZE4ZZc07Y5rHxcLoQ)",
+		"CreateMsg(8291264a-4581-4d12-96e5-e9fcfa6e68d9, 1, 'hello')",
+	}, mockCourier.Calls)
+
+	send(`{"type": "set_email", "email": "bob@nyaruka.com"}`)
+
+	// reload contact and check email is now set
+	contact, err = models.LoadContact(ctx, rt, orgID, "itlu4O6ZE4ZZc07Y5rHxcLoQ")
+	assert.NoError(t, err)
+	assert.Equal(t, "bob@nyaruka.com", contact.Email)
 }

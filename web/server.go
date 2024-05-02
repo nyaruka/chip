@@ -13,6 +13,7 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/nyaruka/gocommon/httpx"
 	"github.com/nyaruka/gocommon/jsonx"
+	"github.com/nyaruka/tembachat/core/courier"
 	"github.com/nyaruka/tembachat/core/models"
 	"github.com/nyaruka/tembachat/runtime"
 	"golang.org/x/exp/maps"
@@ -20,6 +21,7 @@ import (
 
 type Service interface {
 	Store() models.Store
+	Courier() courier.Courier
 	OnSendRequest(*models.Channel, *models.MsgOut)
 }
 

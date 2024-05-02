@@ -13,6 +13,7 @@ type ChannelID int64
 type ChannelUUID uuids.UUID
 
 type Channel struct {
+	ID     ChannelID      `json:"id"`
 	UUID   ChannelUUID    `json:"uuid"`
 	OrgID  OrgID          `json:"org_id"`
 	Config map[string]any `json:"config"`
@@ -25,7 +26,9 @@ func (c *Channel) Secret() string {
 
 const sqlSelectChannel = `
 SELECT row_to_json(r) FROM (
-	SELECT uuid, org_id, config FROM channels_channel WHERE uuid = $1 AND channel_type = 'TWC' AND is_active
+	SELECT id, uuid, org_id, config 
+	FROM channels_channel 
+	WHERE uuid = $1 AND channel_type = 'TWC' AND is_active
 ) r`
 
 func LoadChannel(ctx context.Context, rt *runtime.Runtime, uuid ChannelUUID) (*Channel, error) {

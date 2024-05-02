@@ -11,7 +11,6 @@ import (
 	"github.com/nyaruka/gocommon/httpx"
 	"github.com/nyaruka/gocommon/jsonx"
 	"github.com/nyaruka/gocommon/uuids"
-	"github.com/nyaruka/tembachat/core/courier"
 	"github.com/nyaruka/tembachat/core/models"
 	"github.com/nyaruka/tembachat/web/commands"
 	"github.com/nyaruka/tembachat/web/events"
@@ -79,7 +78,7 @@ func (c *Client) onCommand(cmd commands.Command) error {
 
 		// if client provided a chat ID look for a matching contact
 		if typed.ChatID != "" {
-			contact, err := models.LoadContact(ctx, c.server.rt, c.channel, typed.ChatID)
+			contact, err := models.LoadContact(ctx, c.server.rt, c.channel.OrgID, typed.ChatID)
 			if err != nil && err != sql.ErrNoRows {
 				return errors.Wrap(err, "error looking up contact")
 			}
@@ -95,12 +94,12 @@ func (c *Client) onCommand(cmd commands.Command) error {
 		chatID := models.NewChatID()
 
 		// and have courier create a contact and trigger a new_conversation event
-		if err := courier.StartChat(c.server.rt.Config, c.channel, chatID); err != nil {
+		if err := c.server.service.Courier().StartChat(c.channel, chatID); err != nil {
 			return errors.Wrap(err, "error notifying courier")
 		}
 
 		// contact should now exist now...
-		contact, err := models.LoadContact(ctx, c.server.rt, c.channel, chatID)
+		contact, err := models.LoadContact(ctx, c.server.rt, c.channel.OrgID, chatID)
 		if err != nil {
 			return errors.Wrap(err, "error looking up new contact")
 		}
@@ -114,7 +113,7 @@ func (c *Client) onCommand(cmd commands.Command) error {
 			return nil
 		}
 
-		if err := courier.CreateMsg(c.server.rt.Config, c.channel, c.contact, typed.Text); err != nil {
+		if err := c.server.service.Courier().CreateMsg(c.channel, c.contact, typed.Text); err != nil {
 			return errors.Wrap(err, "error notifying courier")
 		}
 

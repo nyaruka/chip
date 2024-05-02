@@ -13,14 +13,27 @@ import (
 	"github.com/pkg/errors"
 )
 
+type Courier interface {
+	StartChat(ch *models.Channel, chatID models.ChatID) error
+	CreateMsg(ch *models.Channel, contact *models.Contact, text string) error
+}
+
+type courier struct {
+	cfg *runtime.Config
+}
+
+func NewCourier(cfg *runtime.Config) Courier {
+	return &courier{cfg: cfg}
+}
+
 type payload struct {
 	ChatID models.ChatID `json:"chat_id"`
 	Secret string        `json:"secret"`
 	Events []Event       `json:"events"`
 }
 
-func notifyCourier(baseURL string, ch *models.Channel, payload *payload) error {
-	url := fmt.Sprintf("%s/c/twc/%s/receive", baseURL, ch.UUID)
+func (c *courier) request(ch *models.Channel, payload *payload) error {
+	url := fmt.Sprintf("%s/c/twc/%s/receive", c.cfg.Courier, ch.UUID)
 	body := jsonx.MustMarshal(payload)
 	request, _ := httpx.NewRequest("POST", url, bytes.NewReader(body), nil)
 
@@ -35,16 +48,16 @@ func notifyCourier(baseURL string, ch *models.Channel, payload *payload) error {
 	return nil
 }
 
-func StartChat(cfg *runtime.Config, ch *models.Channel, chatID models.ChatID) error {
-	return notifyCourier(cfg.Courier, ch, &payload{
+func (c *courier) StartChat(ch *models.Channel, chatID models.ChatID) error {
+	return c.request(ch, &payload{
 		ChatID: chatID,
 		Secret: ch.Secret(),
 		Events: []Event{newChatStartedEvent()},
 	})
 }
 
-func CreateMsg(cfg *runtime.Config, ch *models.Channel, contact *models.Contact, text string) error {
-	return notifyCourier(cfg.Courier, ch, &payload{
+func (c *courier) CreateMsg(ch *models.Channel, contact *models.Contact, text string) error {
+	return c.request(ch, &payload{
 		ChatID: contact.ChatID,
 		Secret: ch.Secret(),
 		Events: []Event{newMsgInEvent(text)},
