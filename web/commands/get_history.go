@@ -11,5 +11,5 @@ const TypeGetHistory string = "get_history"
 type GetHistory struct {
 	baseCommand
 
-	Before *time.Time `json:"before"`
+	Before time.Time `json:"before" validate:"required"`
 }

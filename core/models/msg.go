@@ -2,7 +2,6 @@ package models
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/nyaruka/gocommon/dbutil"
@@ -73,24 +72,13 @@ const sqlSelectContactMessages = `
 SELECT row_to_json(r) FROM (
     SELECT id, text, direction, broadcast_id, flow_id, ticket_id, created_by_id, created_on
       FROM msgs_msg 
-     WHERE contact_id = $1 AND msg_type = 'T' AND visibility IN ('V', 'A') %s
+     WHERE contact_id = $1 AND msg_type = 'T' AND visibility IN ('V', 'A') AND created_on < $2
   ORDER BY created_on DESC, id DESC 
-     LIMIT %d
+     LIMIT $3
 ) r`
 
-func LoadContactMessages(ctx context.Context, rt *runtime.Runtime, contactID ContactID, beforeCreatedOn *time.Time, limit int) ([]*Msg, error) {
-	var q string
-	var params []any
-
-	if beforeCreatedOn != nil {
-		q = fmt.Sprintf(sqlSelectContactMessages, "AND created_on < $2", limit)
-		params = []any{contactID, *beforeCreatedOn}
-	} else {
-		q = fmt.Sprintf(sqlSelectContactMessages, "", limit)
-		params = []any{contactID}
-	}
-
-	rows, err := rt.DB.QueryContext(ctx, q, params...)
+func LoadContactMessages(ctx context.Context, rt *runtime.Runtime, contactID ContactID, before time.Time, limit int) ([]*Msg, error) {
+	rows, err := rt.DB.QueryContext(ctx, sqlSelectContactMessages, contactID, before, limit)
 	if err != nil {
 		return nil, errors.Wrap(err, "error querying contact messages")
 	}

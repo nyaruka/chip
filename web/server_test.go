@@ -65,13 +65,16 @@ func TestServer(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, c)
 
-	defer c.Close()
-
 	send := func(m string) {
 		err := c.WriteMessage(websocket.TextMessage, []byte(m))
 		assert.NoError(t, err)
 
 		time.Sleep(100 * time.Millisecond)
+	}
+	read := func() string {
+		_, d, err := c.ReadMessage()
+		assert.NoError(t, err)
+		return string(d)
 	}
 
 	send(`{"type": "start_chat"}`)
@@ -82,10 +85,8 @@ func TestServer(t *testing.T) {
 
 	assert.Equal(t, []string{"StartChat(8291264a-4581-4d12-96e5-e9fcfa6e68d9, itlu4O6ZE4ZZc07Y5rHxcLoQ)"}, mockCourier.Calls)
 
-	// server should have sent a chat_started event back to the client
-	_, d, err := c.ReadMessage()
-	assert.NoError(t, err)
-	assert.JSONEq(t, `{"type":"chat_started","time":"2024-05-02T16:05:08Z","chat_id":"itlu4O6ZE4ZZc07Y5rHxcLoQ"}`, string(d))
+	// server should send a chat_started event back to the client
+	assert.JSONEq(t, `{"type":"chat_started","time":"2024-05-02T16:05:08Z","chat_id":"itlu4O6ZE4ZZc07Y5rHxcLoQ"}`, read())
 
 	send(`{"type": "send_msg", "text": "hello"}`)
 
@@ -100,4 +101,19 @@ func TestServer(t *testing.T) {
 	contact, err = models.LoadContact(ctx, rt, orgID, "itlu4O6ZE4ZZc07Y5rHxcLoQ")
 	assert.NoError(t, err)
 	assert.Equal(t, "bob@nyaruka.com", contact.Email)
+
+	send(`{"type": "get_history", "before": "2024-05-02T16:05:10Z"}`)
+
+	// server should send a history event back to the client
+	assert.JSONEq(t, `{
+		"type": "history",
+		"time": "2024-05-02T16:05:10Z",
+		"history": [
+			{"type": "msg_out", "time": "2024-05-02T16:05:09Z", "msg_id":1, "origin": "chat", "text": "hello"}
+		]
+	}`, read())
+
+	c.Close()
+
+	time.Sleep(100 * time.Millisecond)
 }

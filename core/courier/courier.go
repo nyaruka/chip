@@ -13,6 +13,7 @@ import (
 	"github.com/pkg/errors"
 )
 
+// Courier is the interface for interacting with a courier instance or a mock
 type Courier interface {
 	StartChat(ch *models.Channel, chatID models.ChatID) error
 	CreateMsg(ch *models.Channel, contact *models.Contact, text string) error
@@ -22,6 +23,7 @@ type courier struct {
 	cfg *runtime.Config
 }
 
+// NewCourier creates a new courier instance using the provided configuration
 func NewCourier(cfg *runtime.Config) Courier {
 	return &courier{cfg: cfg}
 }
