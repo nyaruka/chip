@@ -2,6 +2,7 @@ package models
 
 import (
 	"context"
+	"database/sql"
 
 	"github.com/nyaruka/gocommon/dbutil"
 	"github.com/nyaruka/gocommon/uuids"
@@ -39,7 +40,7 @@ func LoadChannel(ctx context.Context, rt *runtime.Runtime, uuid ChannelUUID) (*C
 	defer rows.Close()
 
 	if !rows.Next() {
-		return nil, errors.New("channel query returned no rows")
+		return nil, sql.ErrNoRows
 	}
 	ch := &Channel{}
 	if err := dbutil.ScanJSON(rows, ch); err != nil {

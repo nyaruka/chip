@@ -64,6 +64,13 @@ CREATE TABLE auth_user (
     is_staff boolean NOT NULL
 );
 
+DROP TABLE IF EXISTS orgs_usersettings CASCADE;
+CREATE TABLE orgs_usersettings (
+    id serial primary key,
+    user_id integer NOT NULL REFERENCES auth_user(id) ON DELETE CASCADE,
+    avatar character varying(100) NULL
+);
+
 DROP TABLE IF EXISTS flows_flow CASCADE;
 CREATE TABLE flows_flow (id serial primary key);
 

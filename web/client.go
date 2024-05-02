@@ -132,8 +132,17 @@ func (c *Client) onCommand(cmd commands.Command) error {
 		history := make([]events.Event, len(msgs))
 		for i, m := range msgs {
 			if m.Direction == models.DirectionOut {
-				// TODO get user
-				history[i] = events.NewMsgOut(m.CreatedOn, m.ID, m.Text, m.Origin(), nil)
+				// TODO find logical place for this so that it can be shared with Service.send
+				var user *events.User
+				if m.CreatedByID != models.NilUserID {
+					u, err := c.server.service.Store().GetUser(ctx, m.CreatedByID)
+					if err != nil {
+						log.Error("error fetching user", "error", err)
+					} else {
+						user = events.NewUser(u.Name(), u.Email, u.AvatarURL(c.server.rt.Config))
+					}
+				}
+				history[i] = events.NewMsgOut(m.CreatedOn, m.ID, m.Text, m.Origin(), user)
 			} else {
 				history[i] = events.NewMsgIn(m.CreatedOn, m.ID, m.Text)
 			}

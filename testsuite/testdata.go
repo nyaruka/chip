@@ -68,12 +68,16 @@ func InsertURN(rt *runtime.Runtime, orgID models.OrgID, contactID models.Contact
 	return id
 }
 
-func InsertUser(rt *runtime.Runtime, email, firstName, lastName string) models.UserID {
+func InsertUser(rt *runtime.Runtime, email, firstName, lastName, avatar string) models.UserID {
 	row := rt.DB.QueryRow(
 		`INSERT INTO auth_user(email, first_name, last_name, is_active, is_staff) 
 		VALUES($1, $2, $3, TRUE, FALSE) RETURNING id`, email, firstName, lastName,
 	)
 	var id models.UserID
 	must(row.Scan(&id))
+
+	_, err := rt.DB.Exec(`INSERT INTO orgs_usersettings(user_id, avatar) VALUES($1, $2)`, id, avatar)
+	noError(err)
+
 	return id
 }

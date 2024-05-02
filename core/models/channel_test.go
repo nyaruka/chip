@@ -17,7 +17,7 @@ func TestLoadChannel(t *testing.T) {
 	testsuite.InsertChannel(rt, "8291264a-4581-4d12-96e5-e9fcfa6e68d9", orgID, "TWC", "WebChat", "123", []string{"webchat"})
 
 	_, err := models.LoadChannel(ctx, rt, "ecf5ff5d-0c2d-4850-8641-e3f2fc7afaea")
-	assert.EqualError(t, err, "channel query returned no rows")
+	assert.EqualError(t, err, "sql: no rows in result set")
 
 	ch, err := models.LoadChannel(ctx, rt, "8291264a-4581-4d12-96e5-e9fcfa6e68d9")
 	assert.NoError(t, err)
