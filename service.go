@@ -154,15 +154,17 @@ func (s *Service) send() {
 			if err != nil {
 				log.Error("error popping message from outbox", "error", err)
 			} else if msg != nil {
-				var user models.User
+				var user *events.User
 				if msg.UserID != models.NilUserID {
-					user, err = s.store.GetUser(ctx, msg.UserID)
+					u, err := s.store.GetUser(ctx, msg.UserID)
 					if err != nil {
 						log.Error("error fetching user", "error", err)
+					} else {
+						user = events.NewUser(u.Name(), u.Email())
 					}
 				}
 
-				client.Send(events.NewMsgCreated(msg.Text, msg.Origin, user))
+				client.Send(events.NewMsgOut(msg.Time, msg.ID, msg.Text, msg.Origin, user))
 			}
 		}
 	}

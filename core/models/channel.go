@@ -9,7 +9,6 @@ import (
 	"github.com/pkg/errors"
 )
 
-type OrgID int
 type ChannelID int64
 type ChannelUUID uuids.UUID
 
