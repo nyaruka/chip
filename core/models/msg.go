@@ -38,10 +38,10 @@ type MsgOut struct {
 	Time   time.Time `json:"time"`
 }
 
-func NewMsgOut(id MsgID, chatID ChatID, text string, origin MsgOrigin, u User, t time.Time) *MsgOut {
+func NewMsgOut(id MsgID, chatID ChatID, text string, origin MsgOrigin, u *User, t time.Time) *MsgOut {
 	var userID UserID
 	if u != nil {
-		userID = u.ID()
+		userID = u.ID
 	}
 
 	return &MsgOut{ID: id, ChatID: chatID, Text: text, Origin: origin, UserID: userID, Time: t}

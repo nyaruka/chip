@@ -20,7 +20,7 @@ import (
 
 type Service interface {
 	Store() models.Store
-	OnSendRequest(models.Channel, *models.MsgOut)
+	OnSendRequest(*models.Channel, *models.MsgOut)
 }
 
 type Server struct {
@@ -100,7 +100,7 @@ func (s *Server) Stop() {
 	log.Info("stopped")
 }
 
-func (s *Server) channelHandler(fn func(context.Context, *http.Request, http.ResponseWriter, models.Channel)) http.HandlerFunc {
+func (s *Server) channelHandler(fn func(context.Context, *http.Request, http.ResponseWriter, *models.Channel)) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		channelUUID := models.ChannelUUID(r.PathValue("channel"))
 
@@ -114,7 +114,7 @@ func (s *Server) channelHandler(fn func(context.Context, *http.Request, http.Res
 	}
 }
 
-func (s *Server) handleConnect(ctx context.Context, r *http.Request, w http.ResponseWriter, ch models.Channel) {
+func (s *Server) handleConnect(ctx context.Context, r *http.Request, w http.ResponseWriter, ch *models.Channel) {
 	// hijack the HTTP connection...
 	sock, err := httpx.NewWebSocket(w, r, 4096, 0)
 	if err != nil {
@@ -130,7 +130,7 @@ func (s *Server) handleConnect(ctx context.Context, r *http.Request, w http.Resp
 	s.clientMutex.Unlock()
 	s.wg.Add(1)
 
-	slog.Info("client connected", "channel", ch.UUID(), "client_id", client.id, "total", total)
+	slog.Info("client connected", "channel", ch.UUID, "client_id", client.id, "total", total)
 }
 
 type sendRequest struct {
@@ -145,7 +145,7 @@ type sendRequest struct {
 }
 
 // handles a send message request from courier
-func (s *Server) handleSend(ctx context.Context, r *http.Request, w http.ResponseWriter, ch models.Channel) {
+func (s *Server) handleSend(ctx context.Context, r *http.Request, w http.ResponseWriter, ch *models.Channel) {
 	payload := &sendRequest{}
 	if err := jsonx.UnmarshalWithLimit(r.Body, payload, 1024*1024); err != nil {
 		writeErrorResponse(w, http.StatusBadRequest, "error reading request")
@@ -157,7 +157,7 @@ func (s *Server) handleSend(ctx context.Context, r *http.Request, w http.Respons
 		return
 	}
 
-	var user models.User
+	var user *models.User
 	var err error
 	if payload.Msg.UserID != models.NilUserID {
 		user, err = s.service.Store().GetUser(ctx, payload.Msg.UserID)

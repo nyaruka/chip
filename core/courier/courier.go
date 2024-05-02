@@ -19,8 +19,8 @@ type payload struct {
 	Events []Event       `json:"events"`
 }
 
-func notifyCourier(baseURL string, ch models.Channel, payload *payload) error {
-	url := fmt.Sprintf("%s/c/twc/%s/receive", baseURL, ch.UUID())
+func notifyCourier(baseURL string, ch *models.Channel, payload *payload) error {
+	url := fmt.Sprintf("%s/c/twc/%s/receive", baseURL, ch.UUID)
 	body := jsonx.MustMarshal(payload)
 	request, _ := httpx.NewRequest("POST", url, bytes.NewReader(body), nil)
 
@@ -35,7 +35,7 @@ func notifyCourier(baseURL string, ch models.Channel, payload *payload) error {
 	return nil
 }
 
-func StartChat(cfg *runtime.Config, ch models.Channel, chatID models.ChatID) error {
+func StartChat(cfg *runtime.Config, ch *models.Channel, chatID models.ChatID) error {
 	return notifyCourier(cfg.Courier, ch, &payload{
 		ChatID: chatID,
 		Secret: ch.Secret(),
@@ -43,7 +43,7 @@ func StartChat(cfg *runtime.Config, ch models.Channel, chatID models.ChatID) err
 	})
 }
 
-func CreateMsg(cfg *runtime.Config, ch models.Channel, contact *models.Contact, text string) error {
+func CreateMsg(cfg *runtime.Config, ch *models.Channel, contact *models.Contact, text string) error {
 	return notifyCourier(cfg.Courier, ch, &payload{
 		ChatID: contact.ChatID,
 		Secret: ch.Secret(),

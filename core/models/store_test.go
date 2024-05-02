@@ -27,12 +27,12 @@ func TestStore(t *testing.T) {
 	// from db
 	ch, err = store.GetChannel(ctx, "8291264a-4581-4d12-96e5-e9fcfa6e68d9")
 	assert.NoError(t, err)
-	assert.Equal(t, models.ChannelUUID("8291264a-4581-4d12-96e5-e9fcfa6e68d9"), ch.UUID())
+	assert.Equal(t, models.ChannelUUID("8291264a-4581-4d12-96e5-e9fcfa6e68d9"), ch.UUID)
 
 	// from cache
 	ch, err = store.GetChannel(ctx, "8291264a-4581-4d12-96e5-e9fcfa6e68d9")
 	assert.NoError(t, err)
-	assert.Equal(t, models.ChannelUUID("8291264a-4581-4d12-96e5-e9fcfa6e68d9"), ch.UUID())
+	assert.Equal(t, models.ChannelUUID("8291264a-4581-4d12-96e5-e9fcfa6e68d9"), ch.UUID)
 
 	// no such user
 	user, err := store.GetUser(ctx, 345678)
@@ -42,10 +42,10 @@ func TestStore(t *testing.T) {
 	// from db
 	user, err = store.GetUser(ctx, bobID)
 	assert.NoError(t, err)
-	assert.Equal(t, bobID, user.ID())
+	assert.Equal(t, bobID, user.ID)
 
 	// from cache
 	user, err = store.GetUser(ctx, bobID)
 	assert.NoError(t, err)
-	assert.Equal(t, bobID, user.ID())
+	assert.Equal(t, bobID, user.ID)
 }

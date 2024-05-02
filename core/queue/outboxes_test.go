@@ -40,9 +40,9 @@ func TestOutboxes(t *testing.T) {
 
 	assertredis.LLen(t, rc, "chattest:queue:8291264a-4581-4d12-96e5-e9fcfa6e68d9:65vbbDAQCdPdEWlEhDGy4utO", 3)
 	assertredis.LRange(t, rc, "chattest:queue:8291264a-4581-4d12-96e5-e9fcfa6e68d9:65vbbDAQCdPdEWlEhDGy4utO", 0, 2, []string{
-		fmt.Sprintf(`1706619300000|{"id":101,"chat_id":"65vbbDAQCdPdEWlEhDGy4utO","text":"hi","origin":"chat","user_id":%d,"time":"2024-01-30T12:55:00Z"}`, bob.ID()),
-		fmt.Sprintf(`1706619660000|{"id":102,"chat_id":"65vbbDAQCdPdEWlEhDGy4utO","text":"how can I help","origin":"chat","user_id":%d,"time":"2024-01-30T13:01:00Z"}`, bob.ID()),
-		fmt.Sprintf(`1706619900000|{"id":104,"chat_id":"65vbbDAQCdPdEWlEhDGy4utO","text":"ok","origin":"chat","user_id":%d,"time":"2024-01-30T13:05:00Z"}`, bob.ID()),
+		fmt.Sprintf(`1706619300000|{"id":101,"chat_id":"65vbbDAQCdPdEWlEhDGy4utO","text":"hi","origin":"chat","user_id":%d,"time":"2024-01-30T12:55:00Z"}`, bob.ID),
+		fmt.Sprintf(`1706619660000|{"id":102,"chat_id":"65vbbDAQCdPdEWlEhDGy4utO","text":"how can I help","origin":"chat","user_id":%d,"time":"2024-01-30T13:01:00Z"}`, bob.ID),
+		fmt.Sprintf(`1706619900000|{"id":104,"chat_id":"65vbbDAQCdPdEWlEhDGy4utO","text":"ok","origin":"chat","user_id":%d,"time":"2024-01-30T13:05:00Z"}`, bob.ID),
 	})
 	assertredis.LLen(t, rc, "chattest:queue:8291264a-4581-4d12-96e5-e9fcfa6e68d9:3xdF7KhyEiabBiCd3Cst3X28", 1)
 	assertredis.ZCard(t, rc, "chattest:queues", 2)

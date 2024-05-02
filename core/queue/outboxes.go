@@ -25,10 +25,10 @@ type Outboxes struct {
 	KeyBase string
 }
 
-func (o *Outboxes) AddMessage(rc redis.Conn, ch models.Channel, m *models.MsgOut) error {
+func (o *Outboxes) AddMessage(rc redis.Conn, ch *models.Channel, m *models.MsgOut) error {
 	rc.Send("MULTI")
 	rc.Send("RPUSH", o.chatQueueKey(ch, m.ChatID), o.encodeMsg(m))
-	rc.Send("ZADD", o.allChatsKey(), "NX", m.Time.UnixMilli(), fmt.Sprintf("%s:%s", ch.UUID(), m.ChatID)) // update only if we're first message in queue
+	rc.Send("ZADD", o.allChatsKey(), "NX", m.Time.UnixMilli(), fmt.Sprintf("%s:%s", ch.UUID, m.ChatID)) // update only if we're first message in queue
 	_, err := rc.Do("EXEC")
 	return err
 }
@@ -61,8 +61,8 @@ func (o *Outboxes) All(rc redis.Conn) ([]*Outbox, error) {
 	return boxes, nil
 }
 
-func (o *Outboxes) PopMessage(rc redis.Conn, ch models.Channel, chatID models.ChatID) (*models.MsgOut, error) {
-	item, err := redis.Bytes(outboxPopScript.Do(rc, o.chatQueueKey(ch, chatID), o.allChatsKey(), ch.UUID(), chatID))
+func (o *Outboxes) PopMessage(rc redis.Conn, ch *models.Channel, chatID models.ChatID) (*models.MsgOut, error) {
+	item, err := redis.Bytes(outboxPopScript.Do(rc, o.chatQueueKey(ch, chatID), o.allChatsKey(), ch.UUID, chatID))
 	if err != nil && err != redis.ErrNil {
 		return nil, err
 	}
@@ -70,8 +70,8 @@ func (o *Outboxes) PopMessage(rc redis.Conn, ch models.Channel, chatID models.Ch
 	return o.decodeMsg(item), nil
 }
 
-func (o *Outboxes) PopAll(rc redis.Conn, ch models.Channel, chatID models.ChatID) ([]*models.MsgOut, error) {
-	items, err := redis.ByteSlices(outboxPopAllScript.Do(rc, o.chatQueueKey(ch, chatID), o.allChatsKey(), ch.UUID(), chatID))
+func (o *Outboxes) PopAll(rc redis.Conn, ch *models.Channel, chatID models.ChatID) ([]*models.MsgOut, error) {
+	items, err := redis.ByteSlices(outboxPopAllScript.Do(rc, o.chatQueueKey(ch, chatID), o.allChatsKey(), ch.UUID, chatID))
 	if err != nil && err != redis.ErrNil {
 		return nil, err
 	}
@@ -84,8 +84,8 @@ func (o *Outboxes) PopAll(rc redis.Conn, ch models.Channel, chatID models.ChatID
 	return msgs, nil
 }
 
-func (o *Outboxes) chatQueueKey(channel models.Channel, chatID models.ChatID) string {
-	return fmt.Sprintf("%s:queue:%s:%s", o.KeyBase, channel.UUID(), chatID)
+func (o *Outboxes) chatQueueKey(channel *models.Channel, chatID models.ChatID) string {
+	return fmt.Sprintf("%s:queue:%s:%s", o.KeyBase, channel.UUID, chatID)
 }
 
 func (o *Outboxes) allChatsKey() string {

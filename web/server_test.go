@@ -15,8 +15,8 @@ type MockService struct {
 	store models.Store
 }
 
-func (s *MockService) Store() models.Store                          { return s.store }
-func (s *MockService) OnSendRequest(models.Channel, *models.MsgOut) {}
+func (s *MockService) Store() models.Store                           { return s.store }
+func (s *MockService) OnSendRequest(*models.Channel, *models.MsgOut) {}
 
 func TestServer(t *testing.T) {
 	_, rt := testsuite.Runtime()

@@ -22,7 +22,7 @@ type Client struct {
 	id      string
 	server  *Server
 	socket  httpx.WebSocket
-	channel models.Channel
+	channel *models.Channel
 	contact *models.Contact
 
 	send     chan events.Event
@@ -30,7 +30,7 @@ type Client struct {
 	sendWait sync.WaitGroup
 }
 
-func NewClient(s *Server, sock httpx.WebSocket, channel models.Channel) *Client {
+func NewClient(s *Server, sock httpx.WebSocket, channel *models.Channel) *Client {
 	c := &Client{
 		id:      string(uuids.New()),
 		server:  s,
@@ -196,5 +196,5 @@ func (c *Client) chatID() models.ChatID {
 }
 
 func (c *Client) log() *slog.Logger {
-	return slog.With("client_id", c.id, "channel", c.channel.UUID(), "chat_id", c.chatID())
+	return slog.With("client_id", c.id, "channel", c.channel.UUID, "chat_id", c.chatID())
 }

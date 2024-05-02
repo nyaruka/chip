@@ -21,6 +21,6 @@ func TestLoadChannel(t *testing.T) {
 
 	ch, err := models.LoadChannel(ctx, rt, "8291264a-4581-4d12-96e5-e9fcfa6e68d9")
 	assert.NoError(t, err)
-	assert.Equal(t, models.ChannelUUID("8291264a-4581-4d12-96e5-e9fcfa6e68d9"), ch.UUID())
-	assert.Equal(t, orgID, ch.OrgID())
+	assert.Equal(t, models.ChannelUUID("8291264a-4581-4d12-96e5-e9fcfa6e68d9"), ch.UUID)
+	assert.Equal(t, orgID, ch.OrgID)
 }

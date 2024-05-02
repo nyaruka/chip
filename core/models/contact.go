@@ -28,10 +28,6 @@ type Contact struct {
 	Email  string    `json:"email"`
 }
 
-func NewContact(ch Channel) *Contact {
-	return &Contact{OrgID: ch.OrgID(), ChatID: NewChatID()}
-}
-
 func (c *Contact) UpdateEmail(ctx context.Context, rt *runtime.Runtime, email string) error {
 	c.Email = email
 
@@ -59,14 +55,14 @@ SELECT row_to_json(r) FROM (
 	SELECT contact_id AS id, org_id, path AS chat_id, display AS email FROM contacts_contacturn WHERE org_id = $1 AND identity = $2
 ) r`
 
-func LoadContact(ctx context.Context, rt *runtime.Runtime, channel Channel, chatID ChatID) (*Contact, error) {
+func LoadContact(ctx context.Context, rt *runtime.Runtime, channel *Channel, chatID ChatID) (*Contact, error) {
 	// convert chatID to a webchat URN amd check that's valid
 	urn, err := urns.NewURNFromParts(urns.WebChatScheme, string(chatID), "", "")
 	if err != nil {
 		return nil, err
 	}
 
-	rows, err := rt.DB.QueryContext(ctx, sqlSelectContact, channel.OrgID(), urn.Identity())
+	rows, err := rt.DB.QueryContext(ctx, sqlSelectContact, channel.OrgID, urn.Identity())
 	if err != nil {
 		return nil, errors.Wrap(err, "error querying contact")
 	}

@@ -12,22 +12,14 @@ import (
 type ChannelID int64
 type ChannelUUID uuids.UUID
 
-type Channel interface {
-	UUID() ChannelUUID
-	OrgID() OrgID
-	Secret() string
+type Channel struct {
+	UUID   ChannelUUID    `json:"uuid"`
+	OrgID  OrgID          `json:"org_id"`
+	Config map[string]any `json:"config"`
 }
 
-type channel struct {
-	UUID_   ChannelUUID    `json:"uuid"`
-	OrgID_  OrgID          `json:"org_id"`
-	Config_ map[string]any `json:"config"`
-}
-
-func (c *channel) UUID() ChannelUUID { return c.UUID_ }
-func (c *channel) OrgID() OrgID      { return c.OrgID_ }
-func (c *channel) Secret() string {
-	s, _ := c.Config_["secret"].(string)
+func (c *Channel) Secret() string {
+	s, _ := c.Config["secret"].(string)
 	return s
 }
 
@@ -36,7 +28,7 @@ SELECT row_to_json(r) FROM (
 	SELECT uuid, org_id, config FROM channels_channel WHERE uuid = $1 AND channel_type = 'TWC' AND is_active
 ) r`
 
-func LoadChannel(ctx context.Context, rt *runtime.Runtime, uuid ChannelUUID) (Channel, error) {
+func LoadChannel(ctx context.Context, rt *runtime.Runtime, uuid ChannelUUID) (*Channel, error) {
 	rows, err := rt.DB.QueryContext(ctx, sqlSelectChannel, uuid)
 	if err != nil {
 		return nil, errors.Wrap(err, "error querying channel")
@@ -46,7 +38,7 @@ func LoadChannel(ctx context.Context, rt *runtime.Runtime, uuid ChannelUUID) (Ch
 	if !rows.Next() {
 		return nil, errors.New("channel query returned no rows")
 	}
-	ch := &channel{}
+	ch := &Channel{}
 	if err := dbutil.ScanJSON(rows, ch); err != nil {
 		return nil, errors.Wrap(err, "error scanning channel")
 	}

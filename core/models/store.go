@@ -12,22 +12,22 @@ import (
 type Store interface {
 	Start()
 	Stop()
-	GetChannel(context.Context, ChannelUUID) (Channel, error)
-	GetUser(context.Context, UserID) (User, error)
+	GetChannel(context.Context, ChannelUUID) (*Channel, error)
+	GetUser(context.Context, UserID) (*User, error)
 }
 
 // implementation of Store using cached database lookups
 type store struct {
 	rt       *runtime.Runtime
-	channels *cache.Local[ChannelUUID, Channel]
-	users    *cache.Local[UserID, User]
+	channels *cache.Local[ChannelUUID, *Channel]
+	users    *cache.Local[UserID, *User]
 }
 
 func NewStore(rt *runtime.Runtime) Store {
-	fetchChannel := func(ctx context.Context, uuid ChannelUUID) (Channel, error) {
+	fetchChannel := func(ctx context.Context, uuid ChannelUUID) (*Channel, error) {
 		return LoadChannel(ctx, rt, uuid)
 	}
-	fetchUser := func(ctx context.Context, id UserID) (User, error) {
+	fetchUser := func(ctx context.Context, id UserID) (*User, error) {
 		return LoadUser(ctx, rt, id)
 	}
 
@@ -52,10 +52,10 @@ func (s *store) Stop() {
 	slog.With("comp", "store").Info("stopped")
 }
 
-func (s *store) GetChannel(ctx context.Context, uuid ChannelUUID) (Channel, error) {
+func (s *store) GetChannel(ctx context.Context, uuid ChannelUUID) (*Channel, error) {
 	return s.channels.GetOrFetch(ctx, uuid)
 }
 
-func (s *store) GetUser(ctx context.Context, id UserID) (User, error) {
+func (s *store) GetUser(ctx context.Context, id UserID) (*User, error) {
 	return s.users.GetOrFetch(ctx, id)
 }
