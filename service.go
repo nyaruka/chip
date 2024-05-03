@@ -157,13 +157,14 @@ func (s *Service) send() {
 			if err != nil {
 				log.Error("error popping message from outbox", "error", err)
 			} else if msg != nil {
+				// TODO find logical place for this so that it can be shared with Client.onCommand
 				var user *events.User
 				if msg.UserID != models.NilUserID {
 					u, err := s.store.GetUser(ctx, msg.UserID)
 					if err != nil {
 						log.Error("error fetching user", "error", err)
 					} else {
-						user = events.NewUser(u.Name(), u.Email)
+						user = events.NewUser(u.Name(), u.Email, u.AvatarURL(s.rt.Config))
 					}
 				}
 

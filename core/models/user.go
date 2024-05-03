@@ -2,6 +2,7 @@ package models
 
 import (
 	"context"
+	"database/sql"
 	"strings"
 
 	"github.com/nyaruka/gocommon/dbutil"
@@ -19,13 +20,24 @@ type User struct {
 	Email     string `json:"email"`
 	FirstName string `json:"first_name"`
 	LastName  string `json:"last_name"`
+	Avatar    string `json:"avatar"`
 }
 
 func (u *User) Name() string { return strings.TrimSpace(u.FirstName + " " + u.LastName) }
 
+func (u *User) AvatarURL(cfg *runtime.Config) string {
+	if u.Avatar != "" {
+		return cfg.StorageURL + u.Avatar
+	}
+	return ""
+}
+
 const sqlSelectUser = `
 SELECT row_to_json(r) FROM (
-	SELECT id, email, first_name, last_name FROM auth_user WHERE id = $1 AND is_active
+	SELECT u.id, u.email, u.first_name, u.last_name, s.avatar
+	FROM auth_user u
+	INNER JOIN orgs_usersettings s ON s.user_id = u.id
+	WHERE u.id = $1 AND u.is_active
 ) r`
 
 func LoadUser(ctx context.Context, rt *runtime.Runtime, id UserID) (*User, error) {
@@ -36,7 +48,7 @@ func LoadUser(ctx context.Context, rt *runtime.Runtime, id UserID) (*User, error
 	defer rows.Close()
 
 	if !rows.Next() {
-		return nil, errors.New("user query returned no rows")
+		return nil, sql.ErrNoRows
 	}
 	u := &User{}
 	if err := dbutil.ScanJSON(rows, u); err != nil {

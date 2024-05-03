@@ -109,7 +109,7 @@ func TestServer(t *testing.T) {
 		"type": "history",
 		"time": "2024-05-02T16:05:10Z",
 		"history": [
-			{"type": "msg_out", "time": "2024-05-02T16:05:09Z", "msg_id":1, "origin": "chat", "text": "hello"}
+			{"type": "msg_in", "time": "2024-05-02T16:05:09Z", "msg_id":1, "text": "hello"}
 		]
 	}`, read())
 

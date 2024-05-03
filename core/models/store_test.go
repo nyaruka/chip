@@ -17,11 +17,11 @@ func TestStore(t *testing.T) {
 
 	orgID := testsuite.InsertOrg(rt, "Nyaruka")
 	testsuite.InsertChannel(rt, "8291264a-4581-4d12-96e5-e9fcfa6e68d9", orgID, "TWC", "WebChat", "123", []string{"webchat"})
-	bobID := testsuite.InsertUser(rt, "bob@nyaruka.com", "Bob", "McFlows")
+	bobID := testsuite.InsertUser(rt, "bob@nyaruka.com", "Bob", "McFlows", "")
 
 	// no such channel
 	ch, err := store.GetChannel(ctx, "71cdbd54-30c4-4ae6-b122-0a153573d912")
-	assert.EqualError(t, err, "channel query returned no rows")
+	assert.EqualError(t, err, "sql: no rows in result set")
 	assert.Nil(t, ch)
 
 	// from db
@@ -36,7 +36,7 @@ func TestStore(t *testing.T) {
 
 	// no such user
 	user, err := store.GetUser(ctx, 345678)
-	assert.EqualError(t, err, "user query returned no rows")
+	assert.EqualError(t, err, "sql: no rows in result set")
 	assert.Nil(t, user)
 
 	// from db
