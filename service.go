@@ -38,6 +38,7 @@ func NewService(cfg *runtime.Config) *Service {
 		rt:         rt,
 		store:      models.NewStore(rt),
 		outboxes:   &queue.Outboxes{KeyBase: "chat"},
+		courier:    courier.NewCourier(rt.Config),
 		senderStop: make(chan bool),
 	}
 
