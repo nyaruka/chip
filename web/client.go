@@ -123,7 +123,7 @@ func (c *Client) onCommand(cmd commands.Command) error {
 			return nil
 		}
 
-		msgs, err := models.LoadContactMessages(ctx, c.server.rt, c.contact.ID, typed.Before, 10)
+		msgs, err := models.LoadContactMessages(ctx, c.server.rt, c.contact.ID, typed.Before, 25)
 		if err != nil {
 			return errors.Wrap(err, "error loading contact messages")
 
