@@ -20,7 +20,7 @@ func TestContact(t *testing.T) {
 
 	// try loading from invalid chat ID
 	_, err := models.LoadContact(ctx, rt, orgID, "xyz")
-	assert.EqualError(t, err, "invalid webchat id: xyz")
+	assert.EqualError(t, err, "invalid path component")
 
 	// try loading from non-existent chat ID
 	_, err = models.LoadContact(ctx, rt, orgID, "123456789012345678901234")
