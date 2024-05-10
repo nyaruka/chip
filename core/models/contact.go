@@ -32,7 +32,7 @@ type Contact struct {
 func (c *Contact) UpdateEmail(ctx context.Context, rt *runtime.Runtime, email string) error {
 	c.Email = email
 
-	urn, _ := urns.NewURNFromParts(urns.WebChatScheme, string(c.ChatID), "", "")
+	urn, _ := urns.New(urns.WebChat, string(c.ChatID))
 
 	row := rt.DB.QueryRowContext(ctx,
 		`UPDATE contacts_contacturn SET display = $3 WHERE org_id = $1 AND identity = $2 RETURNING contact_id`, c.OrgID, urn, email,
@@ -60,7 +60,7 @@ SELECT row_to_json(r) FROM (
 
 func LoadContact(ctx context.Context, rt *runtime.Runtime, orgID OrgID, chatID ChatID) (*Contact, error) {
 	// convert chatID to a webchat URN amd check that's valid
-	urn, err := urns.NewURNFromParts(urns.WebChatScheme, string(chatID), "", "")
+	urn, err := urns.New(urns.WebChat, string(chatID))
 	if err != nil {
 		return nil, err
 	}
