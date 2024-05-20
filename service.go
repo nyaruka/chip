@@ -169,7 +169,7 @@ func (s *Service) send() {
 					}
 				}
 
-				client.Send(events.NewMsgOut(msg.Time, msg.ID, msg.Text, msg.Origin, user))
+				client.Send(events.NewMsgOut(msg.Time, msg.ID, msg.Text, msg.Attachments, msg.Origin, user))
 			}
 		}
 	}

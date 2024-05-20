@@ -25,7 +25,8 @@ func newChatStartedEvent() Event {
 }
 
 type msgIn struct {
-	Text string `json:"text"`
+	Text        string   `json:"text"`
+	Attachments []string `json:"attachments"`
 }
 
 type msgInEvent struct {
@@ -33,10 +34,10 @@ type msgInEvent struct {
 	Msg msgIn `json:"msg"`
 }
 
-func newMsgInEvent(text string) Event {
+func newMsgInEvent(text string, attachments []string) Event {
 	return &msgInEvent{
 		baseEvent: baseEvent{Type_: "msg_in"},
-		Msg:       msgIn{Text: text},
+		Msg:       msgIn{Text: text, Attachments: attachments},
 	}
 }
 

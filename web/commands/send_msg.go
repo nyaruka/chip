@@ -9,5 +9,6 @@ const TypeSendMsg string = "send_msg"
 type SendMsg struct {
 	baseCommand
 
-	Text string `json:"text" validate:"required"`
+	Text        string   `json:"text"`
+	Attachments []string `json:"atttachments"`
 }

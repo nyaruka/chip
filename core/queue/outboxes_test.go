@@ -29,13 +29,13 @@ func TestOutboxes(t *testing.T) {
 	rc := rt.RP.Get()
 	defer rc.Close()
 
-	err := o.AddMessage(rc, ch, models.NewMsgOut(101, "65vbbDAQCdPdEWlEhDGy4utO", "hi", models.MsgOriginChat, bob, time.Date(2024, 1, 30, 12, 55, 0, 0, time.UTC)))
+	err := o.AddMessage(rc, ch, models.NewMsgOut(101, "65vbbDAQCdPdEWlEhDGy4utO", "hi", nil, models.MsgOriginChat, bob, time.Date(2024, 1, 30, 12, 55, 0, 0, time.UTC)))
 	assert.NoError(t, err)
-	err = o.AddMessage(rc, ch, models.NewMsgOut(102, "65vbbDAQCdPdEWlEhDGy4utO", "how can I help", models.MsgOriginChat, bob, time.Date(2024, 1, 30, 13, 1, 0, 0, time.UTC)))
+	err = o.AddMessage(rc, ch, models.NewMsgOut(102, "65vbbDAQCdPdEWlEhDGy4utO", "how can I help", nil, models.MsgOriginChat, bob, time.Date(2024, 1, 30, 13, 1, 0, 0, time.UTC)))
 	assert.NoError(t, err)
-	err = o.AddMessage(rc, ch, models.NewMsgOut(103, "3xdF7KhyEiabBiCd3Cst3X28", "hola", models.MsgOriginFlow, nil, time.Date(2024, 1, 30, 13, 32, 0, 0, time.UTC)))
+	err = o.AddMessage(rc, ch, models.NewMsgOut(103, "3xdF7KhyEiabBiCd3Cst3X28", "hola", nil, models.MsgOriginFlow, nil, time.Date(2024, 1, 30, 13, 32, 0, 0, time.UTC)))
 	assert.NoError(t, err)
-	err = o.AddMessage(rc, ch, models.NewMsgOut(104, "65vbbDAQCdPdEWlEhDGy4utO", "ok", models.MsgOriginChat, bob, time.Date(2024, 1, 30, 13, 5, 0, 0, time.UTC)))
+	err = o.AddMessage(rc, ch, models.NewMsgOut(104, "65vbbDAQCdPdEWlEhDGy4utO", "ok", nil, models.MsgOriginChat, bob, time.Date(2024, 1, 30, 13, 5, 0, 0, time.UTC)))
 	assert.NoError(t, err)
 
 	assertredis.LLen(t, rc, "chattest:queue:8291264a-4581-4d12-96e5-e9fcfa6e68d9:65vbbDAQCdPdEWlEhDGy4utO", 3)

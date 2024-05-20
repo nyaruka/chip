@@ -29,15 +29,16 @@ const (
 )
 
 type MsgOut struct {
-	ID     MsgID     `json:"id"`
-	ChatID ChatID    `json:"chat_id"`
-	Text   string    `json:"text"`
-	Origin MsgOrigin `json:"origin"`
-	UserID UserID    `json:"user_id"`
-	Time   time.Time `json:"time"`
+	ID          MsgID     `json:"id"`
+	ChatID      ChatID    `json:"chat_id"`
+	Text        string    `json:"text"`
+	Attachments []string  `json:"attachments,omitempty"`
+	Origin      MsgOrigin `json:"origin"`
+	UserID      UserID    `json:"user_id"`
+	Time        time.Time `json:"time"`
 }
 
-func NewMsgOut(id MsgID, chatID ChatID, text string, origin MsgOrigin, u *User, t time.Time) *MsgOut {
+func NewMsgOut(id MsgID, chatID ChatID, text string, attachments []string, origin MsgOrigin, u *User, t time.Time) *MsgOut {
 	var userID UserID
 	if u != nil {
 		userID = u.ID
@@ -49,6 +50,7 @@ func NewMsgOut(id MsgID, chatID ChatID, text string, origin MsgOrigin, u *User, 
 type Msg struct {
 	ID          MsgID        `json:"id"`
 	Text        string       `json:"text"`
+	Attachments []string     `json:"attachments"`
 	Direction   MsgDirection `json:"direction"`
 	BroadcastID BroadcastID  `json:"broadcast_id"`
 	FlowID      FlowID       `json:"flow_id"`
@@ -70,7 +72,7 @@ func (m *Msg) Origin() MsgOrigin {
 
 const sqlSelectContactMessages = `
 SELECT row_to_json(r) FROM (
-    SELECT id, text, direction, broadcast_id, flow_id, ticket_id, created_by_id, created_on
+    SELECT id, text, attachments, direction, broadcast_id, flow_id, ticket_id, created_by_id, created_on
       FROM msgs_msg 
      WHERE contact_id = $1 AND msg_type = 'T' AND visibility IN ('V', 'A') AND created_on < $2
   ORDER BY created_on DESC, id DESC 

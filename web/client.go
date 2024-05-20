@@ -112,8 +112,12 @@ func (c *Client) onCommand(cmd commands.Command) error {
 			log.Debug("chat not started, command ignored")
 			return nil
 		}
+		if typed.Text == "" && len(typed.Attachments) == 0 {
+			log.Debug("msg is empty, command ignored")
+			return nil
+		}
 
-		if err := c.server.service.Courier().CreateMsg(c.channel, c.contact, typed.Text); err != nil {
+		if err := c.server.service.Courier().CreateMsg(c.channel, c.contact, typed.Text, typed.Attachments); err != nil {
 			return errors.Wrap(err, "error notifying courier")
 		}
 
@@ -142,7 +146,7 @@ func (c *Client) onCommand(cmd commands.Command) error {
 						user = events.NewUser(u.Name(), u.Email, u.AvatarURL(c.server.rt.Config))
 					}
 				}
-				history[i] = events.NewMsgOut(m.CreatedOn, m.ID, m.Text, m.Origin(), user)
+				history[i] = events.NewMsgOut(m.CreatedOn, m.ID, m.Text, m.Attachments, m.Origin(), user)
 			} else {
 				history[i] = events.NewMsgIn(m.CreatedOn, m.ID, m.Text)
 			}

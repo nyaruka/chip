@@ -10,7 +10,7 @@ require (
 	github.com/gorilla/websocket v1.5.1
 	github.com/lib/pq v1.10.9
 	github.com/nyaruka/ezconf v0.3.0
-	github.com/nyaruka/gocommon v1.54.9
+	github.com/nyaruka/gocommon v1.55.0
 	github.com/nyaruka/null/v2 v2.0.3
 	github.com/nyaruka/redisx v0.8.0
 	github.com/pkg/errors v0.9.1

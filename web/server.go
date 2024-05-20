@@ -136,13 +136,14 @@ func (s *Server) handleConnect(ctx context.Context, r *http.Request, w http.Resp
 }
 
 type sendRequest struct {
-	ChatID models.ChatID `json:"chat_id"         validate:"required"`
-	Secret string        `json:"secret"          validate:"required"`
+	ChatID models.ChatID `json:"chat_id"              validate:"required"`
+	Secret string        `json:"secret"               validate:"required"`
 	Msg    struct {
-		ID     models.MsgID     `json:"id"       validate:"required"`
-		Text   string           `json:"text"     validate:"required"`
-		Origin models.MsgOrigin `json:"origin"   validate:"required"`
-		UserID models.UserID    `json:"user_id"`
+		ID          models.MsgID     `json:"id"       validate:"required"`
+		Text        string           `json:"text"`
+		Attachments []string         `json:"attachments"`
+		Origin      models.MsgOrigin `json:"origin"   validate:"required"`
+		UserID      models.UserID    `json:"user_id"`
 	} `json:"msg"`
 }
 
@@ -169,7 +170,7 @@ func (s *Server) handleSend(ctx context.Context, r *http.Request, w http.Respons
 		}
 	}
 
-	s.service.OnSendRequest(ch, models.NewMsgOut(payload.Msg.ID, payload.ChatID, payload.Msg.Text, payload.Msg.Origin, user, time.Now()))
+	s.service.OnSendRequest(ch, models.NewMsgOut(payload.Msg.ID, payload.ChatID, payload.Msg.Text, payload.Msg.Attachments, payload.Msg.Origin, user, time.Now()))
 
 	w.Write(jsonx.MustMarshal(map[string]any{"status": "queued"}))
 }

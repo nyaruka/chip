@@ -27,7 +27,7 @@ func (c *MockCourier) StartChat(ch *models.Channel, chatID models.ChatID) error 
 	return nil
 }
 
-func (c *MockCourier) CreateMsg(ch *models.Channel, contact *models.Contact, text string) error {
+func (c *MockCourier) CreateMsg(ch *models.Channel, contact *models.Contact, text string, attachments []string) error {
 	c.Calls = append(c.Calls, fmt.Sprintf("CreateMsg(%s, %d, '%s')", ch.UUID, contact.ID, text))
 
 	InsertIncomingMsg(c.rt, ch.OrgID, ch.ID, contact.ID, contact.URNID, text, dates.Now())
