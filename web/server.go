@@ -51,8 +51,8 @@ func NewServer(rt *runtime.Runtime, service Service) *Server {
 	router.Use(middleware.RealIP)
 	router.Use(middleware.Recoverer)
 	router.Use(middleware.Timeout(15 * time.Second))
-	router.Handle("/connect/{channel:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}}", s.channelHandler(s.handleConnect))
-	router.Handle("/send/{channel:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}}", s.channelHandler(s.handleSend))
+	router.Handle("/wc/connect/{channel:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}}", s.channelHandler(s.handleConnect))
+	router.Handle("/wc/send/{channel:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}}", s.channelHandler(s.handleSend))
 
 	s.httpServer = &http.Server{
 		Addr:    fmt.Sprintf("%s:%d", rt.Config.Address, rt.Config.Port),
