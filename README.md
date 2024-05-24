@@ -1,6 +1,6 @@
-# temba-chat
+# chip chat
 
-[![Build Status](https://github.com/nyaruka/temba-chat/workflows/CI/badge.svg)](https://github.com/nyaruka/temba-chat/actions?query=workflow%3ACI) 
+[![Build Status](https://github.com/nyaruka/chip/workflows/CI/badge.svg)](https://github.com/nyaruka/chip/actions?query=workflow%3ACI) 
 
 Webchat server that talks to [Courier](https://github.com/nyaruka/courier/).
 
