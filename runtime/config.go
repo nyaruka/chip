@@ -37,7 +37,7 @@ func NewDefaultConfig() *Config {
 
 func LoadConfig() *Config {
 	config := NewDefaultConfig()
-	loader := ezconf.NewLoader(config, "chipserver", "Chip - webchat server", []string{"config.toml"})
+	loader := ezconf.NewLoader(config, "chip", "Chip - webchat server", []string{"config.toml"})
 	loader.MustLoad()
 
 	// ensure config is valid
