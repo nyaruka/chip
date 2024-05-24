@@ -4,8 +4,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/nyaruka/tembachat/core/models"
-	"github.com/nyaruka/tembachat/testsuite"
+	"github.com/nyaruka/chip/core/models"
+	"github.com/nyaruka/chip/testsuite"
 	"github.com/stretchr/testify/assert"
 )
 

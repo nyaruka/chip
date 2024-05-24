@@ -3,11 +3,11 @@ package courier_test
 import (
 	"testing"
 
+	"github.com/nyaruka/chip/core/courier"
+	"github.com/nyaruka/chip/core/models"
+	"github.com/nyaruka/chip/runtime"
+	"github.com/nyaruka/chip/testsuite"
 	"github.com/nyaruka/gocommon/httpx"
-	"github.com/nyaruka/tembachat/core/courier"
-	"github.com/nyaruka/tembachat/core/models"
-	"github.com/nyaruka/tembachat/runtime"
-	"github.com/nyaruka/tembachat/testsuite"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

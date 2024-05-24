@@ -3,7 +3,7 @@ package events
 import (
 	"time"
 
-	"github.com/nyaruka/tembachat/core/models"
+	"github.com/nyaruka/chip/core/models"
 )
 
 const TypeChatStarted string = "chat_started"

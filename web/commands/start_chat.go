@@ -1,6 +1,6 @@
 package commands
 
-import "github.com/nyaruka/tembachat/core/models"
+import "github.com/nyaruka/chip/core/models"
 
 func init() {
 	registerType(TypeStartChat, func() Command { return &StartChat{} })

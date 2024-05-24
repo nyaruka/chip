@@ -8,12 +8,12 @@ import (
 	"path"
 
 	"github.com/gomodule/redigo/redis"
+	"github.com/nyaruka/chip/runtime"
 	"github.com/nyaruka/redisx/assertredis"
-	"github.com/nyaruka/tembachat/runtime"
 )
 
 const (
-	dbURL = "postgres://chatserver_test:temba@localhost/chatserver_test?sslmode=disable&Timezone=UTC"
+	dbURL = "postgres://chip_test:temba@localhost/chip_test?sslmode=disable&Timezone=UTC"
 )
 
 var _db *sql.DB

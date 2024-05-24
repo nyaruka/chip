@@ -4,10 +4,10 @@ import (
 	"context"
 	"database/sql"
 
+	"github.com/nyaruka/chip/runtime"
 	"github.com/nyaruka/gocommon/dbutil"
 	"github.com/nyaruka/gocommon/random"
 	"github.com/nyaruka/gocommon/urns"
-	"github.com/nyaruka/tembachat/runtime"
 	"github.com/pkg/errors"
 )
 

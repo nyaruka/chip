@@ -1,4 +1,4 @@
-module github.com/nyaruka/tembachat
+module github.com/nyaruka/chip
 
 go 1.22
 

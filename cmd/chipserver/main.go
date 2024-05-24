@@ -11,8 +11,8 @@ import (
 
 	"github.com/getsentry/sentry-go"
 	_ "github.com/lib/pq"
-	"github.com/nyaruka/tembachat"
-	"github.com/nyaruka/tembachat/runtime"
+	"github.com/nyaruka/chip"
+	"github.com/nyaruka/chip/runtime"
 	slogmulti "github.com/samber/slog-multi"
 	slogsentry "github.com/samber/slog-sentry"
 )
@@ -51,7 +51,7 @@ func main() {
 	log := slog.With("comp", "main")
 	log.Info("starting...", "version", version, "released", date)
 
-	svc := tembachat.NewService(config)
+	svc := chip.NewService(config)
 	if err := svc.Start(); err != nil {
 		log.Error("unable to start", "error", err)
 		os.Exit(1)
@@ -61,7 +61,7 @@ func main() {
 }
 
 // handleSignals takes care of trapping quit, interrupt or terminate signals and doing the right thing
-func handleSignals(svc *tembachat.Service) {
+func handleSignals(svc *chip.Service) {
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
 

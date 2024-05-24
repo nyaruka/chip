@@ -1,4 +1,4 @@
-package tembachat
+package chip
 
 import (
 	"context"
@@ -6,13 +6,13 @@ import (
 	"sync"
 	"time"
 
+	"github.com/nyaruka/chip/core/courier"
+	"github.com/nyaruka/chip/core/models"
+	"github.com/nyaruka/chip/core/queue"
+	"github.com/nyaruka/chip/runtime"
+	"github.com/nyaruka/chip/web"
+	"github.com/nyaruka/chip/web/events"
 	"github.com/nyaruka/redisx"
-	"github.com/nyaruka/tembachat/core/courier"
-	"github.com/nyaruka/tembachat/core/models"
-	"github.com/nyaruka/tembachat/core/queue"
-	"github.com/nyaruka/tembachat/runtime"
-	"github.com/nyaruka/tembachat/web"
-	"github.com/nyaruka/tembachat/web/events"
 	"github.com/pkg/errors"
 )
 
