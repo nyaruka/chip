@@ -5,10 +5,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/nyaruka/chip/core/models"
+	"github.com/nyaruka/chip/core/queue"
+	"github.com/nyaruka/chip/testsuite"
 	"github.com/nyaruka/redisx/assertredis"
-	"github.com/nyaruka/tembachat/core/models"
-	"github.com/nyaruka/tembachat/core/queue"
-	"github.com/nyaruka/tembachat/testsuite"
 	"github.com/stretchr/testify/assert"
 )
 

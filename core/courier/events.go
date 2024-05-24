@@ -1,6 +1,6 @@
 package courier
 
-import "github.com/nyaruka/tembachat/core/models"
+import "github.com/nyaruka/chip/core/models"
 
 type Event interface {
 	Type() string

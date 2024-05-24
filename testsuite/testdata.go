@@ -4,10 +4,10 @@ import (
 	"time"
 
 	"github.com/lib/pq"
+	"github.com/nyaruka/chip/core/models"
+	"github.com/nyaruka/chip/runtime"
 	"github.com/nyaruka/gocommon/urns"
 	"github.com/nyaruka/gocommon/uuids"
-	"github.com/nyaruka/tembachat/core/models"
-	"github.com/nyaruka/tembachat/runtime"
 )
 
 func InsertOrg(rt *runtime.Runtime, name string) models.OrgID {

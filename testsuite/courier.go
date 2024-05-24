@@ -3,10 +3,10 @@ package testsuite
 import (
 	"fmt"
 
+	"github.com/nyaruka/chip/core/models"
+	"github.com/nyaruka/chip/runtime"
 	"github.com/nyaruka/gocommon/dates"
 	"github.com/nyaruka/gocommon/urns"
-	"github.com/nyaruka/tembachat/core/models"
-	"github.com/nyaruka/tembachat/runtime"
 )
 
 type MockCourier struct {

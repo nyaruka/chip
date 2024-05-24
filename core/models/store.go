@@ -5,8 +5,8 @@ import (
 	"log/slog"
 	"time"
 
+	"github.com/nyaruka/chip/runtime"
 	"github.com/nyaruka/gocommon/cache"
-	"github.com/nyaruka/tembachat/runtime"
 )
 
 type Store interface {

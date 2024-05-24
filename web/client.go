@@ -7,13 +7,13 @@ import (
 	"sync"
 	"time"
 
+	"github.com/nyaruka/chip/core/models"
+	"github.com/nyaruka/chip/web/commands"
+	"github.com/nyaruka/chip/web/events"
 	"github.com/nyaruka/gocommon/dates"
 	"github.com/nyaruka/gocommon/httpx"
 	"github.com/nyaruka/gocommon/jsonx"
 	"github.com/nyaruka/gocommon/uuids"
-	"github.com/nyaruka/tembachat/core/models"
-	"github.com/nyaruka/tembachat/web/commands"
-	"github.com/nyaruka/tembachat/web/events"
 	"github.com/pkg/errors"
 )
 

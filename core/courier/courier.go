@@ -6,10 +6,10 @@ import (
 	"log/slog"
 	"net/http"
 
+	"github.com/nyaruka/chip/core/models"
+	"github.com/nyaruka/chip/runtime"
 	"github.com/nyaruka/gocommon/httpx"
 	"github.com/nyaruka/gocommon/jsonx"
-	"github.com/nyaruka/tembachat/core/models"
-	"github.com/nyaruka/tembachat/runtime"
 	"github.com/pkg/errors"
 )
 

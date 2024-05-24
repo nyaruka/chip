@@ -4,9 +4,9 @@ import (
 	"context"
 	"database/sql"
 
+	"github.com/nyaruka/chip/runtime"
 	"github.com/nyaruka/gocommon/dbutil"
 	"github.com/nyaruka/gocommon/uuids"
-	"github.com/nyaruka/tembachat/runtime"
 	"github.com/pkg/errors"
 )
 

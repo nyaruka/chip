@@ -9,8 +9,8 @@ import (
 	"time"
 
 	"github.com/gomodule/redigo/redis"
+	"github.com/nyaruka/chip/core/models"
 	"github.com/nyaruka/gocommon/jsonx"
-	"github.com/nyaruka/tembachat/core/models"
 )
 
 //go:embed lua/outbox_pop.lua

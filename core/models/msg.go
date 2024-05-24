@@ -4,8 +4,8 @@ import (
 	"context"
 	"time"
 
+	"github.com/nyaruka/chip/runtime"
 	"github.com/nyaruka/gocommon/dbutil"
-	"github.com/nyaruka/tembachat/runtime"
 	"github.com/pkg/errors"
 )
 

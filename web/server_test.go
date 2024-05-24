@@ -6,13 +6,13 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
+	"github.com/nyaruka/chip/core/courier"
+	"github.com/nyaruka/chip/core/models"
+	"github.com/nyaruka/chip/testsuite"
+	"github.com/nyaruka/chip/web"
 	"github.com/nyaruka/gocommon/dates"
 	"github.com/nyaruka/gocommon/httpx"
 	"github.com/nyaruka/gocommon/random"
-	"github.com/nyaruka/tembachat/core/courier"
-	"github.com/nyaruka/tembachat/core/models"
-	"github.com/nyaruka/tembachat/testsuite"
-	"github.com/nyaruka/tembachat/web"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

@@ -11,11 +11,11 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/nyaruka/chip/core/courier"
+	"github.com/nyaruka/chip/core/models"
+	"github.com/nyaruka/chip/runtime"
 	"github.com/nyaruka/gocommon/httpx"
 	"github.com/nyaruka/gocommon/jsonx"
-	"github.com/nyaruka/tembachat/core/courier"
-	"github.com/nyaruka/tembachat/core/models"
-	"github.com/nyaruka/tembachat/runtime"
 	"golang.org/x/exp/maps"
 )
 

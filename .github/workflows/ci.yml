@@ -15,8 +15,8 @@ jobs:
       postgres:
         image: postgres:15-alpine
         env:
-          POSTGRES_DB: chatserver_test
-          POSTGRES_USER: chatserver_test
+          POSTGRES_DB: chip_test
+          POSTGRES_USER: chip_test
           POSTGRES_PASSWORD: temba
         ports:
           - 5432:5432
