@@ -1,3 +1,7 @@
+v0.0.3 (2024-05-24)
+-------------------------
+ * Prefix endpoints with /wc/
+
 v0.0.2 (2024-05-24)
 -------------------------
  * Remove LICENCE from goreleaser config
