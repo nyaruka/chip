@@ -1,3 +1,8 @@
+v0.0.4 (2024-05-27)
+-------------------------
+ * Use std library errors
+ * Update README.md
+
 v0.0.3 (2024-05-24)
 -------------------------
  * Prefix endpoints with /wc/
