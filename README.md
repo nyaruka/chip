@@ -7,7 +7,7 @@ Webchat server that talks to [Courier](https://github.com/nyaruka/courier/).
 To start chat session as new user:
 
 ```javascript
-sock = new WebSocket("ws://localhost:8070/connect/7d62d551-3030-4100-a260-2d7c4e9693e7/");
+sock = new WebSocket("ws://localhost:8070/wc/connect/7d62d551-3030-4100-a260-2d7c4e9693e7/");
 
 sock.onclose = function (event) {
     console.log("bye!");
