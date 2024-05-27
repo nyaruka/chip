@@ -2,6 +2,7 @@ package courier
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -10,7 +11,6 @@ import (
 	"github.com/nyaruka/chip/runtime"
 	"github.com/nyaruka/gocommon/httpx"
 	"github.com/nyaruka/gocommon/jsonx"
-	"github.com/pkg/errors"
 )
 
 // Courier is the interface for interacting with a courier instance or a mock
@@ -41,7 +41,7 @@ func (c *courier) request(ch *models.Channel, payload *payload) error {
 
 	resp, err := httpx.Do(http.DefaultClient, request, nil, nil)
 	if err != nil {
-		return errors.Wrap(err, "error connecting courier")
+		return fmt.Errorf("error connecting courier: %w", err)
 	} else if resp.StatusCode/100 != 2 {
 		return errors.New("courier returned non-2XX status")
 	}

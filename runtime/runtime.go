@@ -3,10 +3,10 @@ package runtime
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"time"
 
 	"github.com/gomodule/redigo/redis"
-	"github.com/pkg/errors"
 )
 
 type Runtime struct {
@@ -18,7 +18,7 @@ type Runtime struct {
 func OpenDBPool(url string, maxOpenConns int) (*sql.DB, error) {
 	db, err := sql.Open("postgres", url)
 	if err != nil {
-		return nil, errors.Wrapf(err, "unable to open database connection: '%s'", url)
+		return nil, fmt.Errorf("unable to open database connection: '%s'", url)
 	}
 
 	// configure our pool

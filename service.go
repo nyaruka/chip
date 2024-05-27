@@ -2,6 +2,7 @@ package chip
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"sync"
 	"time"
@@ -13,7 +14,6 @@ import (
 	"github.com/nyaruka/chip/web"
 	"github.com/nyaruka/chip/web/events"
 	"github.com/nyaruka/redisx"
-	"github.com/pkg/errors"
 )
 
 const (
@@ -53,14 +53,14 @@ func (s *Service) Start() error {
 
 	s.rt.DB, err = runtime.OpenDBPool(s.rt.Config.DB, 16)
 	if err != nil {
-		return errors.Wrapf(err, "error connecting to database")
+		return fmt.Errorf("error connecting to database: %w", err)
 	} else {
 		log.Info("db ok")
 	}
 
 	s.rt.RP, err = redisx.NewPool(s.rt.Config.Redis)
 	if err != nil {
-		return errors.Wrapf(err, "error connecting to redis")
+		return fmt.Errorf("error connecting to redis: %w", err)
 	} else {
 		log.Info("redis ok")
 	}

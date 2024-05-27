@@ -3,12 +3,12 @@ package models
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"strings"
 
 	"github.com/nyaruka/chip/runtime"
 	"github.com/nyaruka/gocommon/dbutil"
 	"github.com/nyaruka/null/v2"
-	"github.com/pkg/errors"
 )
 
 type UserID null.Int
@@ -43,7 +43,7 @@ SELECT row_to_json(r) FROM (
 func LoadUser(ctx context.Context, rt *runtime.Runtime, id UserID) (*User, error) {
 	rows, err := rt.DB.QueryContext(ctx, sqlSelectUser, id)
 	if err != nil {
-		return nil, errors.Wrap(err, "error querying user")
+		return nil, fmt.Errorf("error querying user: %w", err)
 	}
 	defer rows.Close()
 
@@ -52,7 +52,7 @@ func LoadUser(ctx context.Context, rt *runtime.Runtime, id UserID) (*User, error
 	}
 	u := &User{}
 	if err := dbutil.ScanJSON(rows, u); err != nil {
-		return nil, errors.Wrap(err, "error scanning user")
+		return nil, fmt.Errorf("error scanning user: %w", err)
 	}
 	return u, nil
 }

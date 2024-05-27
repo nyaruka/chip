@@ -3,6 +3,7 @@ package web
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"log/slog"
 	"sync"
 	"time"
@@ -14,7 +15,6 @@ import (
 	"github.com/nyaruka/gocommon/httpx"
 	"github.com/nyaruka/gocommon/jsonx"
 	"github.com/nyaruka/gocommon/uuids"
-	"github.com/pkg/errors"
 )
 
 type Client struct {
@@ -80,7 +80,7 @@ func (c *Client) onCommand(cmd commands.Command) error {
 		if typed.ChatID != "" {
 			contact, err := models.LoadContact(ctx, c.server.rt, c.channel.OrgID, typed.ChatID)
 			if err != nil && err != sql.ErrNoRows {
-				return errors.Wrap(err, "error looking up contact")
+				return fmt.Errorf("error looking up contact: %w", err)
 			}
 
 			if contact != nil {
@@ -95,13 +95,13 @@ func (c *Client) onCommand(cmd commands.Command) error {
 
 		// and have courier create a contact and trigger a new_conversation event
 		if err := c.server.service.Courier().StartChat(c.channel, chatID); err != nil {
-			return errors.Wrap(err, "error notifying courier")
+			return fmt.Errorf("error notifying courier: %w", err)
 		}
 
 		// contact should now exist now...
 		contact, err := models.LoadContact(ctx, c.server.rt, c.channel.OrgID, chatID)
 		if err != nil {
-			return errors.Wrap(err, "error looking up new contact")
+			return fmt.Errorf("error looking up new contact: %w", err)
 		}
 
 		c.contact = contact
@@ -118,7 +118,7 @@ func (c *Client) onCommand(cmd commands.Command) error {
 		}
 
 		if err := c.server.service.Courier().CreateMsg(c.channel, c.contact, typed.Text, typed.Attachments); err != nil {
-			return errors.Wrap(err, "error notifying courier")
+			return fmt.Errorf("error notifying courier, %w", err)
 		}
 
 	case *commands.GetHistory:
@@ -129,7 +129,7 @@ func (c *Client) onCommand(cmd commands.Command) error {
 
 		msgs, err := models.LoadContactMessages(ctx, c.server.rt, c.contact.ID, typed.Before, 25)
 		if err != nil {
-			return errors.Wrap(err, "error loading contact messages")
+			return fmt.Errorf("error loading contact messages: %w", err)
 
 		}
 
@@ -161,7 +161,7 @@ func (c *Client) onCommand(cmd commands.Command) error {
 		}
 
 		if err := c.contact.UpdateEmail(ctx, c.server.rt, typed.Email); err != nil {
-			return errors.Wrap(err, "error updating email")
+			return fmt.Errorf("error updating email: %w", err)
 		}
 	}
 

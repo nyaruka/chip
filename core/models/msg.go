@@ -2,11 +2,11 @@ package models
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/nyaruka/chip/runtime"
 	"github.com/nyaruka/gocommon/dbutil"
-	"github.com/pkg/errors"
 )
 
 type MsgID int64
@@ -82,7 +82,7 @@ SELECT row_to_json(r) FROM (
 func LoadContactMessages(ctx context.Context, rt *runtime.Runtime, contactID ContactID, before time.Time, limit int) ([]*Msg, error) {
 	rows, err := rt.DB.QueryContext(ctx, sqlSelectContactMessages, contactID, before, limit)
 	if err != nil {
-		return nil, errors.Wrap(err, "error querying contact messages")
+		return nil, fmt.Errorf("error querying contact messages: %w", err)
 	}
 	defer rows.Close()
 
@@ -91,7 +91,7 @@ func LoadContactMessages(ctx context.Context, rt *runtime.Runtime, contactID Con
 	for rows.Next() {
 		msg := &Msg{}
 		if err := dbutil.ScanJSON(rows, msg); err != nil {
-			return nil, errors.Wrap(err, "error scanning msg row")
+			return nil, fmt.Errorf("error scanning msg row: %w", err)
 		}
 
 		msgs = append(msgs, msg)

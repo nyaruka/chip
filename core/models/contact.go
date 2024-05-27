@@ -3,12 +3,12 @@ package models
 import (
 	"context"
 	"database/sql"
+	"fmt"
 
 	"github.com/nyaruka/chip/runtime"
 	"github.com/nyaruka/gocommon/dbutil"
 	"github.com/nyaruka/gocommon/random"
 	"github.com/nyaruka/gocommon/urns"
-	"github.com/pkg/errors"
 )
 
 type ContactID int64
@@ -40,12 +40,12 @@ func (c *Contact) UpdateEmail(ctx context.Context, rt *runtime.Runtime, email st
 
 	var contactID ContactID
 	if err := row.Scan(&contactID); err != nil {
-		return errors.Wrap(err, "error updating URN display")
+		return fmt.Errorf("error updating URN display: %w", err)
 	}
 
 	_, err := rt.DB.ExecContext(ctx, `UPDATE contacts_contact SET modified_on = NOW() WHERE id = $1`, contactID)
 	if err != nil {
-		return errors.Wrap(err, "error updating contact modified_on")
+		return fmt.Errorf("error updating contact modified_on: %w", err)
 	}
 
 	return nil
@@ -67,7 +67,7 @@ func LoadContact(ctx context.Context, rt *runtime.Runtime, orgID OrgID, chatID C
 
 	rows, err := rt.DB.QueryContext(ctx, sqlSelectContact, orgID, urn.Identity())
 	if err != nil {
-		return nil, errors.Wrap(err, "error querying contact")
+		return nil, fmt.Errorf("error querying contact: %w", err)
 	}
 	defer rows.Close()
 
@@ -76,7 +76,7 @@ func LoadContact(ctx context.Context, rt *runtime.Runtime, orgID OrgID, chatID C
 	}
 	c := &Contact{}
 	if err := dbutil.ScanJSON(rows, c); err != nil {
-		return nil, errors.Wrap(err, "error scanning contact")
+		return nil, fmt.Errorf("error scanning contact: %w", err)
 	}
 	return c, nil
 }

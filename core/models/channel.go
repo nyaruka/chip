@@ -3,11 +3,11 @@ package models
 import (
 	"context"
 	"database/sql"
+	"fmt"
 
 	"github.com/nyaruka/chip/runtime"
 	"github.com/nyaruka/gocommon/dbutil"
 	"github.com/nyaruka/gocommon/uuids"
-	"github.com/pkg/errors"
 )
 
 type ChannelID int64
@@ -35,7 +35,7 @@ SELECT row_to_json(r) FROM (
 func LoadChannel(ctx context.Context, rt *runtime.Runtime, uuid ChannelUUID) (*Channel, error) {
 	rows, err := rt.DB.QueryContext(ctx, sqlSelectChannel, uuid)
 	if err != nil {
-		return nil, errors.Wrap(err, "error querying channel")
+		return nil, fmt.Errorf("error querying channel: %w", err)
 	}
 	defer rows.Close()
 
@@ -44,7 +44,7 @@ func LoadChannel(ctx context.Context, rt *runtime.Runtime, uuid ChannelUUID) (*C
 	}
 	ch := &Channel{}
 	if err := dbutil.ScanJSON(rows, ch); err != nil {
-		return nil, errors.Wrap(err, "error scanning channel")
+		return nil, fmt.Errorf("error scanning channel: %w", err)
 	}
 	return ch, nil
 }

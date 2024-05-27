@@ -2,9 +2,9 @@ package commands
 
 import (
 	"encoding/json"
+	"fmt"
 
 	"github.com/go-playground/validator/v10"
-	"github.com/pkg/errors"
 )
 
 // TODO move goflow validation utils to gocommon?
@@ -37,7 +37,7 @@ func ReadCommand(d []byte) (Command, error) {
 
 	f := registeredTypes[be.Type_]
 	if f == nil {
-		return nil, errors.Errorf("unknown command type '%s'", be.Type_)
+		return nil, fmt.Errorf("unknown command type '%s'", be.Type_)
 	}
 
 	e := f()
