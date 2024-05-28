@@ -1,3 +1,8 @@
+v0.0.5 (2024-05-28)
+-------------------------
+ * Use redis db 5
+ * Remove incoming attachment support for now
+
 v0.0.4 (2024-05-27)
 -------------------------
  * Use std library errors
