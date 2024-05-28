@@ -48,20 +48,20 @@ func TestServer(t *testing.T) {
 	testsuite.InsertChannel(rt, "8291264a-4581-4d12-96e5-e9fcfa6e68d9", orgID, "TWC", "WebChat", "123", []string{"webchat"})
 
 	// try to start for a non-existent channel
-	req, _ := http.NewRequest("POST", "http://localhost:8070/wc/connect/16955bac-23fd-4b5f-8981-530679ae0ac4/", nil)
+	req, _ := http.NewRequest("POST", "http://localhost:8071/wc/connect/16955bac-23fd-4b5f-8981-530679ae0ac4/", nil)
 	trace, err := httpx.DoTrace(http.DefaultClient, req, nil, nil, -1)
 	assert.NoError(t, err)
 	assert.Equal(t, 400, trace.Response.StatusCode)
 	assert.Equal(t, `{"error":"no such channel"}`, string(trace.ResponseBody))
 
 	// try to start against an existing channel (still fails because HTTP client does support web sockets)
-	req, _ = http.NewRequest("POST", "http://localhost:8070/wc/connect/8291264a-4581-4d12-96e5-e9fcfa6e68d9/", nil)
+	req, _ = http.NewRequest("POST", "http://localhost:8071/wc/connect/8291264a-4581-4d12-96e5-e9fcfa6e68d9/", nil)
 	trace, err = httpx.DoTrace(http.DefaultClient, req, nil, nil, -1)
 	assert.NoError(t, err)
 	assert.Equal(t, 400, trace.Response.StatusCode)
 	assert.Equal(t, "Bad Request\n", string(trace.ResponseBody))
 
-	c, _, err := websocket.DefaultDialer.Dial("ws://localhost:8070/wc/connect/8291264a-4581-4d12-96e5-e9fcfa6e68d9/", nil)
+	c, _, err := websocket.DefaultDialer.Dial("ws://localhost:8071/wc/connect/8291264a-4581-4d12-96e5-e9fcfa6e68d9/", nil)
 	require.NoError(t, err)
 	require.NotNil(t, c)
 

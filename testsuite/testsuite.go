@@ -14,6 +14,7 @@ import (
 
 const (
 	dbURL = "postgres://chip_test:temba@localhost/chip_test?sslmode=disable&Timezone=UTC"
+	port  = 8071
 )
 
 var _db *sql.DB
@@ -21,6 +22,7 @@ var _db *sql.DB
 func Config() *runtime.Config {
 	cfg := runtime.NewDefaultConfig()
 	cfg.DB = dbURL
+	cfg.Port = port
 	return cfg
 }
 
