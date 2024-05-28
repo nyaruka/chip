@@ -112,12 +112,8 @@ func (c *Client) onCommand(cmd commands.Command) error {
 			log.Debug("chat not started, command ignored")
 			return nil
 		}
-		if typed.Text == "" && len(typed.Attachments) == 0 {
-			log.Debug("msg is empty, command ignored")
-			return nil
-		}
 
-		if err := c.server.service.Courier().CreateMsg(c.channel, c.contact, typed.Text, typed.Attachments); err != nil {
+		if err := c.server.service.Courier().CreateMsg(c.channel, c.contact, typed.Text); err != nil {
 			return fmt.Errorf("error notifying courier, %w", err)
 		}
 

@@ -42,7 +42,7 @@ type Outbox struct {
 func (o *Outboxes) All(rc redis.Conn) ([]*Outbox, error) {
 	ss, err := redis.Strings(rc.Do("ZRANGE", o.allChatsKey(), "-inf", "+inf", "BYSCORE", "WITHSCORES"))
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error loading outboxes from redis: %w", err)
 	}
 
 	boxes := make([]*Outbox, len(ss)/2)

@@ -34,10 +34,10 @@ type msgInEvent struct {
 	Msg msgIn `json:"msg"`
 }
 
-func newMsgInEvent(text string, attachments []string) Event {
+func newMsgInEvent(text string) Event {
 	return &msgInEvent{
 		baseEvent: baseEvent{Type_: "msg_in"},
-		Msg:       msgIn{Text: text, Attachments: attachments},
+		Msg:       msgIn{Text: text},
 	}
 }
 

@@ -16,7 +16,7 @@ import (
 // Courier is the interface for interacting with a courier instance or a mock
 type Courier interface {
 	StartChat(ch *models.Channel, chatID models.ChatID) error
-	CreateMsg(ch *models.Channel, contact *models.Contact, text string, attachments []string) error
+	CreateMsg(ch *models.Channel, contact *models.Contact, text string) error
 }
 
 type courier struct {
@@ -58,10 +58,10 @@ func (c *courier) StartChat(ch *models.Channel, chatID models.ChatID) error {
 	})
 }
 
-func (c *courier) CreateMsg(ch *models.Channel, contact *models.Contact, text string, attachments []string) error {
+func (c *courier) CreateMsg(ch *models.Channel, contact *models.Contact, text string) error {
 	return c.request(ch, &payload{
 		ChatID: contact.ChatID,
 		Secret: ch.Secret(),
-		Events: []Event{newMsgInEvent(text, attachments)},
+		Events: []Event{newMsgInEvent(text)},
 	})
 }

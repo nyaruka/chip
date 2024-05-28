@@ -44,7 +44,7 @@ func TestCourier(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, "POST", mocks.Requests()[0].Method)
 
-	err = c.CreateMsg(channel, bob, "hello", nil)
+	err = c.CreateMsg(channel, bob, "hello")
 	assert.NoError(t, err)
 	assert.Equal(t, "POST", mocks.Requests()[1].Method)
 
