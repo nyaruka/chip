@@ -27,7 +27,7 @@ func NewDefaultConfig() *Config {
 		Port:       8070,
 		Courier:    "http://localhost:8080",
 		DB:         "postgres://temba:temba@localhost/temba?sslmode=disable&Timezone=UTC",
-		Redis:      "redis://localhost:6379/15",
+		Redis:      "redis://localhost:6379/5",
 		StorageURL: "http://localhost/media/",
 
 		LogLevel: slog.LevelInfo,
