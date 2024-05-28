@@ -35,7 +35,7 @@ type payload struct {
 }
 
 func (c *courier) request(ch *models.Channel, payload *payload) error {
-	url := fmt.Sprintf("%s/c/twc/%s/receive", c.cfg.Courier, ch.UUID)
+	url := fmt.Sprintf("%s/c/chp/%s/receive", c.cfg.Courier, ch.UUID)
 	body := jsonx.MustMarshal(payload)
 	request, _ := httpx.NewRequest("POST", url, bytes.NewReader(body), nil)
 

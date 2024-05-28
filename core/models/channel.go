@@ -29,7 +29,7 @@ const sqlSelectChannel = `
 SELECT row_to_json(r) FROM (
 	SELECT id, uuid, org_id, config 
 	FROM channels_channel 
-	WHERE uuid = $1 AND channel_type = 'TWC' AND is_active
+	WHERE uuid = $1 AND channel_type = 'CHP' AND is_active
 ) r`
 
 func LoadChannel(ctx context.Context, rt *runtime.Runtime, uuid ChannelUUID) (*Channel, error) {

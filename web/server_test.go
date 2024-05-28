@@ -45,7 +45,7 @@ func TestServer(t *testing.T) {
 	defer server.Stop()
 
 	orgID := testsuite.InsertOrg(rt, "Nyaruka")
-	testsuite.InsertChannel(rt, "8291264a-4581-4d12-96e5-e9fcfa6e68d9", orgID, "TWC", "WebChat", "123", []string{"webchat"})
+	testsuite.InsertChannel(rt, "8291264a-4581-4d12-96e5-e9fcfa6e68d9", orgID, "CHP", "WebChat", "123", []string{"webchat"})
 
 	// try to start for a non-existent channel
 	req, _ := http.NewRequest("POST", "http://localhost:8071/wc/connect/16955bac-23fd-4b5f-8981-530679ae0ac4/", nil)

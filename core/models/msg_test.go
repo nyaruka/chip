@@ -15,7 +15,7 @@ func TestLoadContactMessages(t *testing.T) {
 	defer testsuite.ResetDB()
 
 	orgID := testsuite.InsertOrg(rt, "Nyaruka")
-	chanID := testsuite.InsertChannel(rt, "8291264a-4581-4d12-96e5-e9fcfa6e68d9", orgID, "TWC", "WebChat", "123", []string{"webchat"})
+	chanID := testsuite.InsertChannel(rt, "8291264a-4581-4d12-96e5-e9fcfa6e68d9", orgID, "CHP", "WebChat", "123", []string{"webchat"})
 	annID := testsuite.InsertContact(rt, orgID, "Ann")
 	annURNID := testsuite.InsertURN(rt, orgID, annID, "webchat:78cddDAQCdPdEWlEhDGy4utO")
 	bobID := testsuite.InsertContact(rt, orgID, "Bob")
