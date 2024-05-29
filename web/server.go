@@ -151,7 +151,7 @@ type sendRequest struct {
 func (s *Server) handleSend(ctx context.Context, r *http.Request, w http.ResponseWriter, ch *models.Channel) {
 	payload := &sendRequest{}
 	if err := jsonx.UnmarshalWithLimit(r.Body, payload, 1024*1024); err != nil {
-		writeErrorResponse(w, http.StatusBadRequest, "error reading request")
+		writeErrorResponse(w, http.StatusBadRequest, fmt.Sprintf("error reading request: %s", err))
 		return
 	}
 
