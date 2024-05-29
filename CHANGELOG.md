@@ -1,3 +1,7 @@
+v0.0.7 (2024-05-29)
+-------------------------
+ * Change config to take domain instead of courier url
+
 v0.0.6 (2024-05-29)
 -------------------------
  * Update channel code to CHP
