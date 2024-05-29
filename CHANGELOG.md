@@ -1,3 +1,7 @@
+v0.0.8 (2024-05-29)
+-------------------------
+ * Improve error message on send endpoint
+
 v0.0.7 (2024-05-29)
 -------------------------
  * Change config to take domain instead of courier url
