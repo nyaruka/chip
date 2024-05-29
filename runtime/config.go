@@ -9,9 +9,11 @@ import (
 )
 
 type Config struct {
-	Address    string `help:"the address to bind our web server to"`
-	Port       int    `help:"the port to bind our web server to"`
-	Courier    string `help:"the base URL of the courier instance to notify of events"`
+	Address string `help:"the address to bind our web server to"`
+	Port    int    `help:"the port to bind our web server to"`
+	Domain  string `help:"the domain that the server is listening on"`
+	SSL     bool   `help:"whether server is using SSL"`
+
 	DB         string `validate:"url,startswith=postgres:"           help:"URL for your Postgres database"`
 	Redis      string `validate:"url,startswith=redis:"              help:"URL for your Redis instance"`
 	StorageURL string `validate:"url"                                help:"URL base for public storage, e.g. avatars"`
@@ -23,9 +25,11 @@ type Config struct {
 
 func NewDefaultConfig() *Config {
 	return &Config{
-		Address:    "localhost",
-		Port:       8070,
-		Courier:    "http://localhost:8080",
+		Address: "localhost",
+		Port:    8070,
+		Domain:  "localhost",
+		SSL:     false,
+
 		DB:         "postgres://temba:temba@localhost/temba?sslmode=disable&Timezone=UTC",
 		Redis:      "redis://localhost:6379/5",
 		StorageURL: "http://localhost/media/",

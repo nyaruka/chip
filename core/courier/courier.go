@@ -35,7 +35,11 @@ type payload struct {
 }
 
 func (c *courier) request(ch *models.Channel, payload *payload) error {
-	url := fmt.Sprintf("%s/c/chp/%s/receive", c.cfg.Courier, ch.UUID)
+	proto := "http"
+	if c.cfg.SSL {
+		proto += "s"
+	}
+	url := fmt.Sprintf("%s://%s/c/chp/%s/receive", proto, c.cfg.Domain, ch.UUID)
 	body := jsonx.MustMarshal(payload)
 	request, _ := httpx.NewRequest("POST", url, bytes.NewReader(body), nil)
 

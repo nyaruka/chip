@@ -19,7 +19,7 @@ func TestCourier(t *testing.T) {
 
 	defer httpx.SetRequestor(httpx.DefaultRequestor)
 	mocks := httpx.NewMockRequestor(map[string][]*httpx.MockResponse{
-		"http://courier.com/c/chp/8291264a-4581-4d12-96e5-e9fcfa6e68d9/receive": {
+		"http://example.com/c/chp/8291264a-4581-4d12-96e5-e9fcfa6e68d9/receive": {
 			httpx.NewMockResponse(200, nil, nil),
 			httpx.NewMockResponse(200, nil, nil),
 			httpx.NewMockResponse(400, nil, nil),
@@ -27,7 +27,7 @@ func TestCourier(t *testing.T) {
 	})
 	httpx.SetRequestor(mocks)
 
-	c := courier.NewCourier(&runtime.Config{Courier: "http://courier.com"})
+	c := courier.NewCourier(&runtime.Config{Domain: "example.com"})
 
 	orgID := testsuite.InsertOrg(rt, "Nyaruka")
 	testsuite.InsertChannel(rt, "8291264a-4581-4d12-96e5-e9fcfa6e68d9", orgID, "CHP", "Web Chat", "", []string{"webchat"})
