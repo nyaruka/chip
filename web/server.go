@@ -51,6 +51,7 @@ func NewServer(rt *runtime.Runtime, service Service) *Server {
 	router.Use(middleware.RealIP)
 	router.Use(middleware.Recoverer)
 	router.Use(middleware.Timeout(15 * time.Second))
+	router.Get("/", s.handleIndex)
 	router.Handle("/wc/connect/{channel:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}}", s.channelHandler(s.handleConnect))
 	router.Handle("/wc/send/{channel:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}}", s.channelHandler(s.handleSend))
 
@@ -173,6 +174,11 @@ func (s *Server) handleSend(ctx context.Context, r *http.Request, w http.Respons
 	s.service.OnSendRequest(ch, models.NewMsgOut(payload.Msg.ID, payload.ChatID, payload.Msg.Text, payload.Msg.Attachments, payload.Msg.Origin, user, time.Now()))
 
 	w.Write(jsonx.MustMarshal(map[string]any{"status": "queued"}))
+}
+
+func (s *Server) handleIndex(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(200)
+	w.Write(jsonx.MustMarshal(map[string]string{"version": s.rt.Config.Version}))
 }
 
 func (s *Server) GetClient(chatID models.ChatID) *Client {

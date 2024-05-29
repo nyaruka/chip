@@ -44,12 +44,18 @@ func TestServer(t *testing.T) {
 	server.Start()
 	defer server.Stop()
 
+	req, _ := http.NewRequest("GET", "http://localhost:8071/", nil)
+	trace, err := httpx.DoTrace(http.DefaultClient, req, nil, nil, -1)
+	assert.NoError(t, err)
+	assert.Equal(t, 200, trace.Response.StatusCode)
+	assert.Equal(t, `{"version":"Dev"}`, string(trace.ResponseBody))
+
 	orgID := testsuite.InsertOrg(rt, "Nyaruka")
 	testsuite.InsertChannel(rt, "8291264a-4581-4d12-96e5-e9fcfa6e68d9", orgID, "CHP", "WebChat", "123", []string{"webchat"})
 
 	// try to start for a non-existent channel
-	req, _ := http.NewRequest("POST", "http://localhost:8071/wc/connect/16955bac-23fd-4b5f-8981-530679ae0ac4/", nil)
-	trace, err := httpx.DoTrace(http.DefaultClient, req, nil, nil, -1)
+	req, _ = http.NewRequest("POST", "http://localhost:8071/wc/connect/16955bac-23fd-4b5f-8981-530679ae0ac4/", nil)
+	trace, err = httpx.DoTrace(http.DefaultClient, req, nil, nil, -1)
 	assert.NoError(t, err)
 	assert.Equal(t, 400, trace.Response.StatusCode)
 	assert.Equal(t, `{"error":"no such channel"}`, string(trace.ResponseBody))
@@ -86,7 +92,7 @@ func TestServer(t *testing.T) {
 	assert.Equal(t, []string{"StartChat(8291264a-4581-4d12-96e5-e9fcfa6e68d9, itlu4O6ZE4ZZc07Y5rHxcLoQ)"}, mockCourier.Calls)
 
 	// server should send a chat_started event back to the client
-	assert.JSONEq(t, `{"type":"chat_started","time":"2024-05-02T16:05:08Z","chat_id":"itlu4O6ZE4ZZc07Y5rHxcLoQ"}`, read())
+	assert.JSONEq(t, `{"type":"chat_started","time":"2024-05-02T16:05:10Z","chat_id":"itlu4O6ZE4ZZc07Y5rHxcLoQ"}`, read())
 
 	send(`{"type": "send_msg", "text": "hello"}`)
 
@@ -102,14 +108,14 @@ func TestServer(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, "bob@nyaruka.com", contact.Email)
 
-	send(`{"type": "get_history", "before": "2024-05-02T16:05:10Z"}`)
+	send(`{"type": "get_history", "before": "2024-05-02T16:05:12Z"}`)
 
 	// server should send a history event back to the client
 	assert.JSONEq(t, `{
 		"type": "history",
-		"time": "2024-05-02T16:05:10Z",
+		"time": "2024-05-02T16:05:12Z",
 		"history": [
-			{"type": "msg_in", "time": "2024-05-02T16:05:09Z", "msg_id":1, "text": "hello"}
+			{"type": "msg_in", "time": "2024-05-02T16:05:11Z", "msg_id":1, "text": "hello"}
 		]
 	}`, read())
 
