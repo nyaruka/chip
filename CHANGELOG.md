@@ -1,3 +1,8 @@
+v0.0.9 (2024-05-29)
+-------------------------
+ * Add index page we can use for load balancer
+ * Set content type header on calls to courier
+
 v0.0.8 (2024-05-29)
 -------------------------
  * Improve error message on send endpoint
