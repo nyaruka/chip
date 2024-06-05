@@ -1,4 +1,4 @@
-# chip chat
+# 🍟 Chip
 
 [![Build Status](https://github.com/nyaruka/chip/workflows/CI/badge.svg)](https://github.com/nyaruka/chip/actions?query=workflow%3ACI) 
 
