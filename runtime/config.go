@@ -3,6 +3,7 @@ package runtime
 import (
 	"log"
 	"log/slog"
+	"os"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/nyaruka/ezconf"
@@ -19,11 +20,14 @@ type Config struct {
 	StorageURL string `validate:"url"                                help:"URL base for public storage, e.g. avatars"`
 	SentryDSN  string `                                              help:"the DSN used for logging errors to Sentry"`
 
-	LogLevel slog.Level `help:"the logging level to use"`
-	Version  string     `help:"the version of this install"`
+	InstanceID string     `help:"the unique identifier of this instance, defaults to hostname"`
+	LogLevel   slog.Level `help:"the logging level to use"`
+	Version    string     `help:"the version of this install"`
 }
 
 func NewDefaultConfig() *Config {
+	hostname, _ := os.Hostname()
+
 	return &Config{
 		Address: "localhost",
 		Port:    8070,
@@ -34,8 +38,9 @@ func NewDefaultConfig() *Config {
 		Redis:      "redis://localhost:6379/5",
 		StorageURL: "http://localhost/media/",
 
-		LogLevel: slog.LevelInfo,
-		Version:  "Dev",
+		InstanceID: hostname,
+		LogLevel:   slog.LevelInfo,
+		Version:    "Dev",
 	}
 }
 
