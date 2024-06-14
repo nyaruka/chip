@@ -5,8 +5,18 @@ import (
 
 	"github.com/nyaruka/chip/core/models"
 	"github.com/nyaruka/chip/testsuite"
+	"github.com/nyaruka/gocommon/random"
 	"github.com/stretchr/testify/assert"
 )
+
+func TestNewChatID(t *testing.T) {
+	defer random.SetGenerator(random.DefaultGenerator)
+	random.SetGenerator(random.NewSeededGenerator(1234))
+
+	assert.Equal(t, models.ChatID("itlu4O6ZE4ZZc07Y5rHxcLoQ"), models.NewChatID())
+	assert.Equal(t, models.ChatID("EMExtx3E2diho8guIXhsfEZb"), models.NewChatID())
+	assert.Equal(t, models.ChatID("A0UGLTWLLs59CrFzj6VpvMlG"), models.NewChatID())
+}
 
 func TestContact(t *testing.T) {
 	ctx, rt := testsuite.Runtime()

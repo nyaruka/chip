@@ -24,6 +24,8 @@ type MockService struct {
 
 func (s *MockService) Store() models.Store                           { return s.store }
 func (s *MockService) Courier() courier.Courier                      { return s.courier }
+func (s *MockService) OnChatStarted(*models.Channel, models.ChatID)  {}
+func (s *MockService) OnChatClosed(*models.Channel, models.ChatID)   {}
 func (s *MockService) OnSendRequest(*models.Channel, *models.MsgOut) {}
 
 func TestServer(t *testing.T) {

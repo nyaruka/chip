@@ -21,11 +21,11 @@ const (
 )
 
 type Service struct {
-	rt       *runtime.Runtime
-	server   *web.Server
-	store    models.Store
-	outboxes *queue.Outboxes
-	courier  courier.Courier
+	rt      *runtime.Runtime
+	server  *web.Server
+	store   models.Store
+	outbox  *queue.Outbox
+	courier courier.Courier
 
 	senderStop chan bool
 	senderWait sync.WaitGroup
@@ -37,7 +37,7 @@ func NewService(cfg *runtime.Config) *Service {
 	s := &Service{
 		rt:         rt,
 		store:      models.NewStore(rt),
-		outboxes:   &queue.Outboxes{KeyBase: "chat"},
+		outbox:     &queue.Outbox{KeyBase: "chat", InstanceID: cfg.InstanceID},
 		courier:    courier.NewCourier(rt.Config),
 		senderStop: make(chan bool),
 	}
@@ -90,13 +90,40 @@ func (s *Service) Stop() {
 func (s *Service) Store() models.Store      { return s.store }
 func (s *Service) Courier() courier.Courier { return s.courier }
 
-func (s *Service) OnSendRequest(channel *models.Channel, msg *models.MsgOut) {
+func (s *Service) OnSendRequest(ch *models.Channel, msg *models.MsgOut) {
 	log := slog.With("comp", "service")
 	rc := s.rt.RP.Get()
 	defer rc.Close()
 
-	if err := s.outboxes.AddMessage(rc, channel, msg); err != nil {
+	if err := s.outbox.AddMessage(rc, msg); err != nil {
 		log.Error("error queuing to outbox", "error", err)
+	}
+}
+
+func (s *Service) OnChatStarted(ch *models.Channel, chatID models.ChatID) {
+	log := slog.With("comp", "service")
+	rc := s.rt.RP.Get()
+	defer rc.Close()
+
+	if err := s.courier.StartChat(ch, chatID); err != nil {
+		log.Error("error notifying courier", "error", err)
+		return
+	}
+
+	if err := s.outbox.SetReady(rc, chatID, true); err != nil {
+		log.Error("error setting chat ready", "error", err)
+		return
+	}
+}
+
+func (s *Service) OnChatClosed(ch *models.Channel, chatID models.ChatID) {
+	log := slog.With("comp", "service")
+	rc := s.rt.RP.Get()
+	defer rc.Close()
+
+	if err := s.outbox.SetReady(rc, chatID, false); err != nil {
+		log.Error("error unsetting chat ready", "error", err)
+		return
 	}
 }
 
@@ -125,57 +152,27 @@ func (s *Service) send() {
 	rc := s.rt.RP.Get()
 	defer rc.Close()
 
-	outboxes, err := s.outboxes.All(rc)
+	msgs, err := s.outbox.ReadReady(rc)
 	if err != nil {
 		log.Error("error reading outboxes", "error", err)
 		return
 	}
 
-	for _, box := range outboxes {
-		ch, err := s.store.GetChannel(ctx, box.ChannelUUID)
-		if err != nil {
-			log.Error("error fetching channel", "error", err)
-			// TODO clear outbox queue ?
-			continue
-		}
-
-		if time.Since(box.Oldest) > outboxTimeLimit {
-			// pop entire outbox and then email or fail
-			msgs, err := s.outboxes.PopAll(rc, ch, box.ChatID)
-			if err != nil {
-				log.Error("error popping all from outbox", "error", err)
-			} else if len(msgs) > 0 {
-				if err := s.emailOrFail(ctx, ch, box.ChatID, msgs); err != nil {
-					log.Error("error handling stalled outbox", "error", err)
+	for _, msg := range msgs {
+		client := s.server.GetClient(msg.ChatID)
+		if client != nil {
+			// TODO find logical place for this so that it can be shared with Client.onCommand
+			var user *events.User
+			if msg.UserID != models.NilUserID {
+				u, err := s.store.GetUser(ctx, msg.UserID)
+				if err != nil {
+					log.Error("error fetching user", "error", err)
+				} else {
+					user = events.NewUser(u.Name(), u.Email, u.AvatarURL(s.rt.Config))
 				}
 			}
-		}
 
-		client := s.server.GetClient(box.ChatID)
-
-		if client != nil /*&& client.CanSend()*/ {
-			msg, err := s.outboxes.PopMessage(rc, ch, box.ChatID)
-			if err != nil {
-				log.Error("error popping message from outbox", "error", err)
-			} else if msg != nil {
-				// TODO find logical place for this so that it can be shared with Client.onCommand
-				var user *events.User
-				if msg.UserID != models.NilUserID {
-					u, err := s.store.GetUser(ctx, msg.UserID)
-					if err != nil {
-						log.Error("error fetching user", "error", err)
-					} else {
-						user = events.NewUser(u.Name(), u.Email, u.AvatarURL(s.rt.Config))
-					}
-				}
-
-				client.Send(events.NewMsgOut(msg.Time, msg.ID, msg.Text, msg.Attachments, msg.Origin, user))
-			}
+			client.Send(events.NewMsgOut(msg.Time, msg.ID, msg.Text, msg.Attachments, msg.Origin, user))
 		}
 	}
-}
-
-func (s *Service) emailOrFail(ctx context.Context, ch *models.Channel, chatID models.ChatID, msgs []*models.MsgOut) error {
-	// TODO load contact, queue messages for email sending, or fail them if no email address
-	return nil
 }

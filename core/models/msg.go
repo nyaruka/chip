@@ -29,22 +29,23 @@ const (
 )
 
 type MsgOut struct {
-	ID          MsgID     `json:"id"`
-	ChatID      ChatID    `json:"chat_id"`
-	Text        string    `json:"text"`
-	Attachments []string  `json:"attachments,omitempty"`
-	Origin      MsgOrigin `json:"origin"`
-	UserID      UserID    `json:"user_id"`
-	Time        time.Time `json:"time"`
+	ID          MsgID       `json:"id"`
+	ChannelUUID ChannelUUID `json:"channel_uuid"`
+	ChatID      ChatID      `json:"chat_id"`
+	Text        string      `json:"text"`
+	Attachments []string    `json:"attachments,omitempty"`
+	Origin      MsgOrigin   `json:"origin"`
+	UserID      UserID      `json:"user_id,omitempty"`
+	Time        time.Time   `json:"time"`
 }
 
-func NewMsgOut(id MsgID, chatID ChatID, text string, attachments []string, origin MsgOrigin, u *User, t time.Time) *MsgOut {
+func NewMsgOut(id MsgID, ch *Channel, chatID ChatID, text string, attachments []string, origin MsgOrigin, u *User, t time.Time) *MsgOut {
 	var userID UserID
 	if u != nil {
 		userID = u.ID
 	}
 
-	return &MsgOut{ID: id, ChatID: chatID, Text: text, Origin: origin, UserID: userID, Time: t}
+	return &MsgOut{ID: id, ChannelUUID: ch.UUID, ChatID: chatID, Text: text, Origin: origin, UserID: userID, Time: t}
 }
 
 type Msg struct {

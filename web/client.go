@@ -93,10 +93,7 @@ func (c *Client) onCommand(cmd commands.Command) error {
 		// if not generate a new random chat id
 		chatID := models.NewChatID()
 
-		// and have courier create a contact and trigger a new_conversation event
-		if err := c.server.service.Courier().StartChat(c.channel, chatID); err != nil {
-			return fmt.Errorf("error notifying courier: %w", err)
-		}
+		c.server.service.OnChatStarted(c.channel, chatID)
 
 		// contact should now exist now...
 		contact, err := models.LoadContact(ctx, c.server.rt, c.channel.OrgID, chatID)

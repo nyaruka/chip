@@ -21,7 +21,9 @@ import (
 
 type Service interface {
 	Store() models.Store
-	Courier() courier.Courier
+	Courier() courier.Courier // TODO replace with method to handle message creation
+	OnChatStarted(*models.Channel, models.ChatID)
+	OnChatClosed(*models.Channel, models.ChatID)
 	OnSendRequest(*models.Channel, *models.MsgOut)
 }
 
@@ -171,7 +173,7 @@ func (s *Server) handleSend(ctx context.Context, r *http.Request, w http.Respons
 		}
 	}
 
-	s.service.OnSendRequest(ch, models.NewMsgOut(payload.Msg.ID, payload.ChatID, payload.Msg.Text, payload.Msg.Attachments, payload.Msg.Origin, user, time.Now()))
+	s.service.OnSendRequest(ch, models.NewMsgOut(payload.Msg.ID, ch, payload.ChatID, payload.Msg.Text, payload.Msg.Attachments, payload.Msg.Origin, user, time.Now()))
 
 	w.Write(jsonx.MustMarshal(map[string]any{"status": "queued"}))
 }
@@ -197,11 +199,13 @@ func (s *Server) GetClient(chatID models.ChatID) *Client {
 
 func (s *Server) OnDisconnect(c *Client) {
 	s.clientMutex.Lock()
+
 	delete(s.clients, c.id)
 	total := len(s.clients)
+	s.service.OnChatClosed(c.channel, c.chatID())
+
 	s.clientMutex.Unlock()
 	s.wg.Done()
-
 	slog.Info("client disconnected", "total", total)
 }
 
