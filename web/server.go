@@ -11,7 +11,6 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
-	"github.com/nyaruka/chip/core/courier"
 	"github.com/nyaruka/chip/core/models"
 	"github.com/nyaruka/chip/runtime"
 	"github.com/nyaruka/gocommon/httpx"
@@ -21,8 +20,10 @@ import (
 
 type Service interface {
 	Store() models.Store
-	Courier() courier.Courier
-	OnSendRequest(*models.Channel, *models.MsgOut)
+	OnChatStarted(*models.Channel, models.ChatID) error
+	OnChatMsgIn(*models.Channel, *models.Contact, string) error
+	OnChatClosed(*models.Channel, *models.Contact) error
+	OnSendRequest(*models.Channel, *models.MsgOut) error
 }
 
 type Server struct {
@@ -64,7 +65,7 @@ func NewServer(rt *runtime.Runtime, service Service) *Server {
 }
 
 func (s *Server) Start() {
-	log := slog.With("comp", "webserver", "address", s.rt.Config.Address, "port", s.rt.Config.Port)
+	log := s.log().With("address", s.rt.Config.Address, "port", s.rt.Config.Port)
 
 	s.wg.Add(1)
 
@@ -81,9 +82,7 @@ func (s *Server) Start() {
 }
 
 func (s *Server) Stop() {
-	log := slog.With("comp", "server")
-
-	log.Info("stopping...")
+	s.log().Info("stopping...")
 
 	s.clientMutex.RLock()
 	clients := maps.Values(s.clients)
@@ -95,12 +94,12 @@ func (s *Server) Stop() {
 
 	// shut down our HTTP server
 	if err := s.httpServer.Shutdown(context.Background()); err != nil {
-		log.Error("error shutting down http server", "error", err)
+		s.log().Error("error shutting down http server", "error", err)
 	}
 
 	s.wg.Wait()
 
-	log.Info("stopped")
+	s.log().Info("stopped")
 }
 
 func (s *Server) channelHandler(fn func(context.Context, *http.Request, http.ResponseWriter, *models.Channel)) http.HandlerFunc {
@@ -121,7 +120,7 @@ func (s *Server) handleConnect(ctx context.Context, r *http.Request, w http.Resp
 	// hijack the HTTP connection...
 	sock, err := httpx.NewWebSocket(w, r, 4096, 0)
 	if err != nil {
-		slog.Error("error hijacking connection", "error", err)
+		s.log().Error("error hijacking connection", "error", err)
 		return
 	}
 
@@ -133,7 +132,7 @@ func (s *Server) handleConnect(ctx context.Context, r *http.Request, w http.Resp
 	s.clientMutex.Unlock()
 	s.wg.Add(1)
 
-	slog.Info("client connected", "channel", ch.UUID, "client_id", client.id, "total", total)
+	s.log().Info("client connected", "channel", ch.UUID, "client_id", client.id, "total", total)
 }
 
 type sendRequest struct {
@@ -171,9 +170,15 @@ func (s *Server) handleSend(ctx context.Context, r *http.Request, w http.Respons
 		}
 	}
 
-	s.service.OnSendRequest(ch, models.NewMsgOut(payload.Msg.ID, payload.ChatID, payload.Msg.Text, payload.Msg.Attachments, payload.Msg.Origin, user, time.Now()))
+	err = s.service.OnSendRequest(ch, models.NewMsgOut(payload.Msg.ID, ch, payload.ChatID, payload.Msg.Text, payload.Msg.Attachments, payload.Msg.Origin, user, time.Now()))
+	if err == nil {
+		w.Write(jsonx.MustMarshal(map[string]any{"status": "queued"}))
+	} else {
+		s.log().Error("error handing send request", "error", err)
 
-	w.Write(jsonx.MustMarshal(map[string]any{"status": "queued"}))
+		writeErrorResponse(w, http.StatusInternalServerError, "unable to queue message")
+		return
+	}
 }
 
 func (s *Server) handleIndex(w http.ResponseWriter, r *http.Request) {
@@ -202,7 +207,11 @@ func (s *Server) OnDisconnect(c *Client) {
 	s.clientMutex.Unlock()
 	s.wg.Done()
 
-	slog.Info("client disconnected", "total", total)
+	s.log().Info("client disconnected", "total", total)
+}
+
+func (s *Server) log() *slog.Logger {
+	return slog.With("comp", "server")
 }
 
 func writeErrorResponse(w http.ResponseWriter, status int, msg string) {

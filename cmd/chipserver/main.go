@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	ulog "log"
 	"log/slog"
 	"os"
@@ -12,7 +13,9 @@ import (
 	"github.com/getsentry/sentry-go"
 	_ "github.com/lib/pq"
 	"github.com/nyaruka/chip"
+	"github.com/nyaruka/chip/core/courier"
 	"github.com/nyaruka/chip/runtime"
+	"github.com/nyaruka/redisx"
 	slogmulti "github.com/samber/slog-multi"
 	slogsentry "github.com/samber/slog-sentry"
 )
@@ -51,13 +54,39 @@ func main() {
 	log := slog.With("comp", "main")
 	log.Info("starting...", "version", version, "released", date)
 
-	svc := chip.NewService(config)
-	if err := svc.Start(); err != nil {
+	svc, err := newService(config, log)
+	if err != nil {
 		log.Error("unable to start", "error", err)
 		os.Exit(1)
 	}
 
 	handleSignals(svc) // handle our signals
+}
+
+func newService(cfg *runtime.Config, log *slog.Logger) (*chip.Service, error) {
+	rt := &runtime.Runtime{Config: cfg}
+	var err error
+
+	rt.DB, err = runtime.OpenDBPool(rt.Config.DB, 16)
+	if err != nil {
+		return nil, fmt.Errorf("error connecting to database: %w", err)
+	} else {
+		log.Info("db ok")
+	}
+
+	rt.RP, err = redisx.NewPool(rt.Config.Redis)
+	if err != nil {
+		return nil, fmt.Errorf("error connecting to redis: %w", err)
+	} else {
+		log.Info("redis ok")
+	}
+
+	svc := chip.NewService(rt, courier.NewCourier(rt.Config))
+	if err := svc.Start(); err != nil {
+		return nil, err
+	}
+
+	return svc, nil
 }
 
 // handleSignals takes care of trapping quit, interrupt or terminate signals and doing the right thing
