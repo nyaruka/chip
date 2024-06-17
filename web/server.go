@@ -20,10 +20,10 @@ import (
 
 type Service interface {
 	Store() models.Store
-	OnChatStarted(*models.Channel, models.ChatID) error
-	OnChatMsgIn(*models.Channel, *models.Contact, string) error
-	OnChatClosed(*models.Channel, *models.Contact) error
-	OnSendRequest(*models.Channel, *models.MsgOut) error
+	StartChat(context.Context, *models.Channel, models.ChatID) (*models.Contact, bool, error)
+	CreateMsgIn(context.Context, *models.Channel, *models.Contact, string) error
+	CloseChat(context.Context, *models.Channel, *models.Contact) error
+	QueueMsgOut(context.Context, *models.Channel, *models.MsgOut) error
 }
 
 type Server struct {
@@ -170,7 +170,7 @@ func (s *Server) handleSend(ctx context.Context, r *http.Request, w http.Respons
 		}
 	}
 
-	err = s.service.OnSendRequest(ch, models.NewMsgOut(payload.Msg.ID, ch, payload.ChatID, payload.Msg.Text, payload.Msg.Attachments, payload.Msg.Origin, user, time.Now()))
+	err = s.service.QueueMsgOut(ctx, ch, models.NewMsgOut(payload.Msg.ID, ch, payload.ChatID, payload.Msg.Text, payload.Msg.Attachments, payload.Msg.Origin, user, time.Now()))
 	if err == nil {
 		w.Write(jsonx.MustMarshal(map[string]any{"status": "queued"}))
 	} else {

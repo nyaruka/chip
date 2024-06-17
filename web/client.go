@@ -2,7 +2,6 @@ package web
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
 	"log/slog"
 	"sync"
@@ -76,34 +75,17 @@ func (c *Client) onCommand(cmd commands.Command) error {
 			return nil
 		}
 
-		// if client provided a chat ID look for a matching contact
-		if typed.ChatID != "" {
-			contact, err := models.LoadContact(ctx, c.server.rt, c.channel.OrgID, typed.ChatID)
-			if err != nil && err != sql.ErrNoRows {
-				return fmt.Errorf("error looking up contact: %w", err)
-			}
-
-			if contact != nil {
-				c.contact = contact
-				c.Send(events.NewChatResumed(dates.Now(), contact.ChatID, contact.Email))
-				return nil
-			}
+		contact, isNew, err := c.server.service.StartChat(ctx, c.channel, typed.ChatID)
+		if err != nil {
+			return fmt.Errorf("error starting chat: %w", err)
 		}
 
-		// if not generate a new random chat id
-		chatID := models.NewChatID()
+		c.contact = contact
 
-		if err := c.server.service.OnChatStarted(c.channel, chatID); err != nil {
-			return fmt.Errorf("error starting chat: %w", err)
-		} else {
-			// contact should now exist now...
-			contact, err := models.LoadContact(ctx, c.server.rt, c.channel.OrgID, chatID)
-			if err != nil {
-				return fmt.Errorf("error looking up new contact: %w", err)
-			}
-
-			c.contact = contact
+		if isNew {
 			c.Send(events.NewChatStarted(dates.Now(), contact.ChatID))
+		} else {
+			c.Send(events.NewChatResumed(dates.Now(), contact.ChatID, contact.Email))
 		}
 
 	case *commands.SendMsg:
@@ -112,7 +94,7 @@ func (c *Client) onCommand(cmd commands.Command) error {
 			return nil
 		}
 
-		if err := c.server.service.OnChatMsgIn(c.channel, c.contact, typed.Text); err != nil {
+		if err := c.server.service.CreateMsgIn(ctx, c.channel, c.contact, typed.Text); err != nil {
 			return fmt.Errorf("error handling send msg: %w", err)
 		}
 
@@ -166,8 +148,11 @@ func (c *Client) onCommand(cmd commands.Command) error {
 func (c *Client) onClose(code int) {
 	c.log().Info("closing", "code", code)
 
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
 	if c.contact != nil {
-		c.server.service.OnChatClosed(c.channel, c.contact)
+		c.server.service.CloseChat(ctx, c.channel, c.contact)
 	}
 
 	c.server.OnDisconnect(c)

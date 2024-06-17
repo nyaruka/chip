@@ -2,6 +2,7 @@ package chip
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"log/slog"
 	"sync"
@@ -65,34 +66,58 @@ func (s *Service) Stop() {
 	log.Info("stopped")
 }
 
-func (s *Service) Store() models.Store      { return s.store }
-func (s *Service) Courier() courier.Courier { return s.courier }
+func (s *Service) Store() models.Store { return s.store }
 
-func (s *Service) OnChatStarted(ch *models.Channel, chatID models.ChatID) error {
+func (s *Service) StartChat(ctx context.Context, ch *models.Channel, chatID models.ChatID) (*models.Contact, bool, error) {
 	log := slog.With("comp", "service")
 	rc := s.rt.RP.Get()
 	defer rc.Close()
 
-	if err := s.courier.StartChat(ch, chatID); err != nil {
-		return fmt.Errorf("error notifying courier of new chat: %w", err)
+	var contact *models.Contact
+	var isNew bool
+	var err error
+
+	// if client provided a chat ID look for a matching contact
+	if chatID != "" {
+		contact, err = models.LoadContact(ctx, s.rt, ch.OrgID, chatID)
+		if err != nil && err != sql.ErrNoRows {
+			return nil, false, fmt.Errorf("error looking up contact: %w", err)
+		}
 	}
 
+	// if not or if contact couldn't be found, generate a new random chat id, and have courier create a new contact
+	if contact == nil {
+		chatID = models.NewChatID()
+		isNew = true
+
+		if err := s.courier.StartChat(ch, chatID); err != nil {
+			return nil, false, fmt.Errorf("error notifying courier of new chat: %w", err)
+		}
+
+		// contact should now exist now...
+		contact, err = models.LoadContact(ctx, s.rt, ch.OrgID, chatID)
+		if err != nil {
+			return nil, false, fmt.Errorf("error looking up new contact: %w", err)
+		}
+	}
+
+	// mark our chat id as ready to receive messages
 	if err := s.outbox.SetReady(rc, chatID, true); err != nil {
-		return fmt.Errorf("error setting chat ready: %w", err)
+		return nil, false, fmt.Errorf("error setting chat ready: %w", err)
 	}
 
 	log.Info("chat started", "chat_id", chatID)
-	return nil
+	return contact, isNew, nil
 }
 
-func (s *Service) OnChatMsgIn(ch *models.Channel, contact *models.Contact, text string) error {
+func (s *Service) CreateMsgIn(ctx context.Context, ch *models.Channel, contact *models.Contact, text string) error {
 	if err := s.courier.CreateMsg(ch, contact, text); err != nil {
 		return fmt.Errorf("error notifying courier of new msg: %w", err)
 	}
 	return nil
 }
 
-func (s *Service) OnChatClosed(ch *models.Channel, contact *models.Contact) error {
+func (s *Service) CloseChat(ctx context.Context, ch *models.Channel, contact *models.Contact) error {
 	log := slog.With("comp", "service")
 	rc := s.rt.RP.Get()
 	defer rc.Close()
@@ -105,7 +130,7 @@ func (s *Service) OnChatClosed(ch *models.Channel, contact *models.Contact) erro
 	return nil
 }
 
-func (s *Service) OnSendRequest(ch *models.Channel, msg *models.MsgOut) error {
+func (s *Service) QueueMsgOut(ctx context.Context, ch *models.Channel, msg *models.MsgOut) error {
 	rc := s.rt.RP.Get()
 	defer rc.Close()
 
