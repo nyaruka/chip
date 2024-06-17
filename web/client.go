@@ -77,7 +77,7 @@ func (c *Client) onCommand(cmd commands.Command) error {
 
 		contact, isNew, err := c.server.service.StartChat(ctx, c.channel, typed.ChatID)
 		if err != nil {
-			return fmt.Errorf("error starting chat: %w", err)
+			return fmt.Errorf("error from service: %w", err)
 		}
 
 		c.contact = contact
@@ -95,7 +95,17 @@ func (c *Client) onCommand(cmd commands.Command) error {
 		}
 
 		if err := c.server.service.CreateMsgIn(ctx, c.channel, c.contact, typed.Text); err != nil {
-			return fmt.Errorf("error handling send msg: %w", err)
+			return fmt.Errorf("error from service: %w", err)
+		}
+
+	case *commands.AckMsg:
+		if c.contact == nil {
+			log.Debug("chat not started, command ignored")
+			return nil
+		}
+
+		if err := c.server.service.ConfirmMsgOut(ctx, c.channel, c.contact, typed.MsgID); err != nil {
+			return fmt.Errorf("error from service: %w", err)
 		}
 
 	case *commands.GetHistory:

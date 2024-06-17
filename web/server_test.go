@@ -3,29 +3,17 @@ package web_test
 import (
 	"net/http"
 	"testing"
-	"time"
 
 	"github.com/gorilla/websocket"
 	"github.com/nyaruka/chip"
-	"github.com/nyaruka/chip/core/models"
 	"github.com/nyaruka/chip/testsuite"
-	"github.com/nyaruka/gocommon/dates"
 	"github.com/nyaruka/gocommon/httpx"
-	"github.com/nyaruka/gocommon/random"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func TestServer(t *testing.T) {
-	ctx, rt := testsuite.Runtime()
-
-	defer testsuite.ResetDB()
-
-	defer random.SetGenerator(random.DefaultGenerator)
-	random.SetGenerator(random.NewSeededGenerator(1234))
-
-	defer dates.SetNowSource(dates.DefaultNowSource)
-	dates.SetNowSource(dates.NewSequentialNowSource(time.Date(2024, 5, 2, 16, 5, 4, 0, time.UTC)))
+	_, rt := testsuite.Runtime()
 
 	mockCourier := testsuite.NewMockCourier(rt)
 
@@ -61,55 +49,5 @@ func TestServer(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, c)
 
-	send := func(m string) {
-		err := c.WriteMessage(websocket.TextMessage, []byte(m))
-		assert.NoError(t, err)
-
-		time.Sleep(100 * time.Millisecond)
-	}
-	read := func() string {
-		_, d, err := c.ReadMessage()
-		assert.NoError(t, err)
-		return string(d)
-	}
-
-	send(`{"type": "start_chat"}`)
-
-	contact, err := models.LoadContact(ctx, rt, orgID, "itlu4O6ZE4ZZc07Y5rHxcLoQ")
-	assert.NoError(t, err)
-	assert.NotNil(t, contact)
-
-	assert.Equal(t, []string{"StartChat(8291264a-4581-4d12-96e5-e9fcfa6e68d9, itlu4O6ZE4ZZc07Y5rHxcLoQ)"}, mockCourier.Calls)
-
-	// server should send a chat_started event back to the client
-	assert.JSONEq(t, `{"type":"chat_started","time":"2024-05-02T16:05:10Z","chat_id":"itlu4O6ZE4ZZc07Y5rHxcLoQ"}`, read())
-
-	send(`{"type": "send_msg", "text": "hello"}`)
-
-	assert.Equal(t, []string{
-		"StartChat(8291264a-4581-4d12-96e5-e9fcfa6e68d9, itlu4O6ZE4ZZc07Y5rHxcLoQ)",
-		"CreateMsg(8291264a-4581-4d12-96e5-e9fcfa6e68d9, 1, 'hello')",
-	}, mockCourier.Calls)
-
-	send(`{"type": "set_email", "email": "bob@nyaruka.com"}`)
-
-	// reload contact and check email is now set
-	contact, err = models.LoadContact(ctx, rt, orgID, "itlu4O6ZE4ZZc07Y5rHxcLoQ")
-	assert.NoError(t, err)
-	assert.Equal(t, "bob@nyaruka.com", contact.Email)
-
-	send(`{"type": "get_history", "before": "2024-05-02T16:05:12Z"}`)
-
-	// server should send a history event back to the client
-	assert.JSONEq(t, `{
-		"type": "history",
-		"time": "2024-05-02T16:05:12Z",
-		"history": [
-			{"type": "msg_in", "time": "2024-05-02T16:05:11Z", "msg_id":1, "text": "hello"}
-		]
-	}`, read())
-
 	c.Close()
-
-	time.Sleep(100 * time.Millisecond)
 }

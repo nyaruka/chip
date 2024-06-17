@@ -52,6 +52,17 @@ Creates a new incoming message from the client:
 }
 ```
 
+### `ack_msg`
+
+Acknowledges receipt an outgoing message to the client:
+
+```json
+{
+    "type": "ack_msg",
+    "msg_id": 46363452
+}
+```
+
 ### `get_history`
 
 Requests message history for the current contact:

@@ -101,7 +101,7 @@ func (s *Service) StartChat(ctx context.Context, ch *models.Channel, chatID mode
 		}
 	}
 
-	// mark our chat id as ready to receive messages
+	// mark chat as ready to send messages
 	if err := s.outbox.SetReady(rc, chatID, true); err != nil {
 		return nil, false, fmt.Errorf("error setting chat ready: %w", err)
 	}
@@ -117,11 +117,26 @@ func (s *Service) CreateMsgIn(ctx context.Context, ch *models.Channel, contact *
 	return nil
 }
 
+func (s *Service) ConfirmMsgOut(ctx context.Context, ch *models.Channel, contact *models.Contact, msgID models.MsgID) error {
+	rc := s.rt.RP.Get()
+	defer rc.Close()
+
+	// TODO send DLR to courier
+
+	// mark chat as ready to send again
+	if err := s.outbox.SetReady(rc, contact.ChatID, true); err != nil {
+		return fmt.Errorf("error setting chat ready: %w", err)
+	}
+
+	return nil
+}
+
 func (s *Service) CloseChat(ctx context.Context, ch *models.Channel, contact *models.Contact) error {
 	log := slog.With("comp", "service")
 	rc := s.rt.RP.Get()
 	defer rc.Close()
 
+	// mark chat as no longer ready
 	if err := s.outbox.SetReady(rc, contact.ChatID, false); err != nil {
 		return fmt.Errorf("error unsetting chat ready: %w", err)
 	}
@@ -189,4 +204,6 @@ func (s *Service) send() {
 			client.Send(events.NewMsgOut(msg.Time, msg.ID, msg.Text, msg.Attachments, msg.Origin, user))
 		}
 	}
+
+	// TODO email or fail stale messages
 }
