@@ -93,16 +93,18 @@ func (c *Client) onCommand(cmd commands.Command) error {
 		// if not generate a new random chat id
 		chatID := models.NewChatID()
 
-		c.server.service.OnChatStarted(c.channel, chatID)
+		if err := c.server.service.OnChatStarted(c.channel, chatID); err != nil {
+			return fmt.Errorf("error starting chat: %w", err)
+		} else {
+			// contact should now exist now...
+			contact, err := models.LoadContact(ctx, c.server.rt, c.channel.OrgID, chatID)
+			if err != nil {
+				return fmt.Errorf("error looking up new contact: %w", err)
+			}
 
-		// contact should now exist now...
-		contact, err := models.LoadContact(ctx, c.server.rt, c.channel.OrgID, chatID)
-		if err != nil {
-			return fmt.Errorf("error looking up new contact: %w", err)
+			c.contact = contact
+			c.Send(events.NewChatStarted(dates.Now(), contact.ChatID))
 		}
-
-		c.contact = contact
-		c.Send(events.NewChatStarted(dates.Now(), contact.ChatID))
 
 	case *commands.SendMsg:
 		if c.contact == nil {
@@ -110,8 +112,8 @@ func (c *Client) onCommand(cmd commands.Command) error {
 			return nil
 		}
 
-		if err := c.server.service.Courier().CreateMsg(c.channel, c.contact, typed.Text); err != nil {
-			return fmt.Errorf("error notifying courier, %w", err)
+		if err := c.server.service.OnChatMsgIn(c.channel, c.contact, typed.Text); err != nil {
+			return fmt.Errorf("error handling send msg: %w", err)
 		}
 
 	case *commands.GetHistory:
@@ -163,6 +165,10 @@ func (c *Client) onCommand(cmd commands.Command) error {
 
 func (c *Client) onClose(code int) {
 	c.log().Info("closing", "code", code)
+
+	if c.contact != nil {
+		c.server.service.OnChatClosed(c.channel, c.contact)
+	}
 
 	c.server.OnDisconnect(c)
 

@@ -2,6 +2,7 @@ package chip
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"sync"
 	"time"
@@ -67,45 +68,52 @@ func (s *Service) Stop() {
 func (s *Service) Store() models.Store      { return s.store }
 func (s *Service) Courier() courier.Courier { return s.courier }
 
-func (s *Service) OnSendRequest(ch *models.Channel, msg *models.MsgOut) {
-	log := slog.With("comp", "service")
-	rc := s.rt.RP.Get()
-	defer rc.Close()
-
-	if err := s.outbox.AddMessage(rc, msg); err != nil {
-		log.Error("error queuing to outbox", "error", err)
-	}
-}
-
-func (s *Service) OnChatStarted(ch *models.Channel, chatID models.ChatID) {
+func (s *Service) OnChatStarted(ch *models.Channel, chatID models.ChatID) error {
 	log := slog.With("comp", "service")
 	rc := s.rt.RP.Get()
 	defer rc.Close()
 
 	if err := s.courier.StartChat(ch, chatID); err != nil {
-		log.Error("error notifying courier", "error", err)
-		return
+		return fmt.Errorf("error notifying courier of new chat: %w", err)
 	}
 
 	if err := s.outbox.SetReady(rc, chatID, true); err != nil {
-		log.Error("error setting chat ready", "error", err)
-		return
+		return fmt.Errorf("error setting chat ready: %w", err)
 	}
 
 	log.Info("chat started", "chat_id", chatID)
+	return nil
 }
 
-func (s *Service) OnChatClosed(ch *models.Channel, chatID models.ChatID) {
+func (s *Service) OnChatMsgIn(ch *models.Channel, contact *models.Contact, text string) error {
+	if err := s.courier.CreateMsg(ch, contact, text); err != nil {
+		return fmt.Errorf("error notifying courier of new msg: %w", err)
+	}
+	return nil
+}
+
+func (s *Service) OnChatClosed(ch *models.Channel, contact *models.Contact) error {
 	log := slog.With("comp", "service")
 	rc := s.rt.RP.Get()
 	defer rc.Close()
 
-	if err := s.outbox.SetReady(rc, chatID, false); err != nil {
-		log.Error("error unsetting chat ready", "error", err)
-		return
+	if err := s.outbox.SetReady(rc, contact.ChatID, false); err != nil {
+		return fmt.Errorf("error unsetting chat ready: %w", err)
 	}
 
-	log.Info("chat closed", "chat_id", chatID)
+	log.Info("chat closed", "chat_id", contact.ChatID)
+	return nil
+}
+
+func (s *Service) OnSendRequest(ch *models.Channel, msg *models.MsgOut) error {
+	rc := s.rt.RP.Get()
+	defer rc.Close()
+
+	if err := s.outbox.AddMessage(rc, msg); err != nil {
+		return fmt.Errorf("error queuing to outbox: %w", err)
+	}
+
+	return nil
 }
 
 func (s *Service) sender() {
