@@ -2,7 +2,6 @@ package chip
 
 import (
 	"context"
-	"fmt"
 	"log/slog"
 	"sync"
 	"time"
@@ -13,11 +12,6 @@ import (
 	"github.com/nyaruka/chip/runtime"
 	"github.com/nyaruka/chip/web"
 	"github.com/nyaruka/chip/web/events"
-	"github.com/nyaruka/redisx"
-)
-
-const (
-	outboxTimeLimit = 2 * time.Minute
 )
 
 type Service struct {
@@ -31,14 +25,12 @@ type Service struct {
 	senderWait sync.WaitGroup
 }
 
-func NewService(cfg *runtime.Config) *Service {
-	rt := &runtime.Runtime{Config: cfg}
-
+func NewService(rt *runtime.Runtime, courier courier.Courier) *Service {
 	s := &Service{
 		rt:         rt,
 		store:      models.NewStore(rt),
-		outbox:     &queue.Outbox{KeyBase: "chat", InstanceID: cfg.InstanceID},
-		courier:    courier.NewCourier(rt.Config),
+		outbox:     &queue.Outbox{KeyBase: "chat", InstanceID: rt.Config.InstanceID},
+		courier:    courier,
 		senderStop: make(chan bool),
 	}
 
@@ -49,21 +41,6 @@ func NewService(cfg *runtime.Config) *Service {
 
 func (s *Service) Start() error {
 	log := slog.With("comp", "service")
-	var err error
-
-	s.rt.DB, err = runtime.OpenDBPool(s.rt.Config.DB, 16)
-	if err != nil {
-		return fmt.Errorf("error connecting to database: %w", err)
-	} else {
-		log.Info("db ok")
-	}
-
-	s.rt.RP, err = redisx.NewPool(s.rt.Config.Redis)
-	if err != nil {
-		return fmt.Errorf("error connecting to redis: %w", err)
-	} else {
-		log.Info("redis ok")
-	}
 
 	s.server.Start()
 	s.store.Start()
@@ -114,6 +91,8 @@ func (s *Service) OnChatStarted(ch *models.Channel, chatID models.ChatID) {
 		log.Error("error setting chat ready", "error", err)
 		return
 	}
+
+	log.Info("chat started", "chat_id", chatID)
 }
 
 func (s *Service) OnChatClosed(ch *models.Channel, chatID models.ChatID) {
@@ -125,6 +104,8 @@ func (s *Service) OnChatClosed(ch *models.Channel, chatID models.ChatID) {
 		log.Error("error unsetting chat ready", "error", err)
 		return
 	}
+
+	log.Info("chat closed", "chat_id", chatID)
 }
 
 func (s *Service) sender() {

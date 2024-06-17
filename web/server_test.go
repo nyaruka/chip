@@ -6,27 +6,15 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
-	"github.com/nyaruka/chip/core/courier"
+	"github.com/nyaruka/chip"
 	"github.com/nyaruka/chip/core/models"
 	"github.com/nyaruka/chip/testsuite"
-	"github.com/nyaruka/chip/web"
 	"github.com/nyaruka/gocommon/dates"
 	"github.com/nyaruka/gocommon/httpx"
 	"github.com/nyaruka/gocommon/random"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
-
-type MockService struct {
-	store   models.Store
-	courier courier.Courier
-}
-
-func (s *MockService) Store() models.Store                           { return s.store }
-func (s *MockService) Courier() courier.Courier                      { return s.courier }
-func (s *MockService) OnChatStarted(*models.Channel, models.ChatID)  {}
-func (s *MockService) OnChatClosed(*models.Channel, models.ChatID)   {}
-func (s *MockService) OnSendRequest(*models.Channel, *models.MsgOut) {}
 
 func TestServer(t *testing.T) {
 	ctx, rt := testsuite.Runtime()
@@ -40,11 +28,11 @@ func TestServer(t *testing.T) {
 	dates.SetNowSource(dates.NewSequentialNowSource(time.Date(2024, 5, 2, 16, 5, 4, 0, time.UTC)))
 
 	mockCourier := testsuite.NewMockCourier(rt)
-	mockSvc := &MockService{store: models.NewStore(rt), courier: mockCourier}
 
-	server := web.NewServer(rt, mockSvc)
-	server.Start()
-	defer server.Stop()
+	svc := chip.NewService(rt, mockCourier)
+	assert.NoError(t, svc.Start())
+
+	defer svc.Stop()
 
 	req, _ := http.NewRequest("GET", "http://localhost:8071/", nil)
 	trace, err := httpx.DoTrace(http.DefaultClient, req, nil, nil, -1)
