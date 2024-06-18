@@ -34,6 +34,8 @@ func TestServer(t *testing.T) {
 
 	defer svc.Stop()
 
+	time.Sleep(100 * time.Millisecond)
+
 	req, _ := http.NewRequest("GET", "http://localhost:8071/", nil)
 	trace, err := httpx.DoTrace(http.DefaultClient, req, nil, nil, -1)
 	assert.NoError(t, err)
