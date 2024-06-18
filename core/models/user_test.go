@@ -22,7 +22,6 @@ func TestLoadUser(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, bobID, u.ID)
 	assert.Equal(t, "bob@nyaruka.com", u.Email)
-	assert.Equal(t, "Bob McFlows", u.Name())
-	assert.Equal(t, "avatars/1234/1234567890.webp", u.Avatar)
-	assert.Equal(t, "http://localhost/media/avatars/1234/1234567890.webp", u.AvatarURL(rt.Config))
+	assert.Equal(t, "Bob McFlows", u.Name)
+	assert.Equal(t, "http://localhost/media/avatars/1234/1234567890.webp", u.Avatar)
 }

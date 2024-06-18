@@ -1,8 +1,6 @@
 package events
 
 import (
-	"time"
-
 	"github.com/nyaruka/chip/core/models"
 )
 
@@ -14,6 +12,6 @@ type ChatStarted struct {
 	ChatID models.ChatID `json:"chat_id"`
 }
 
-func NewChatStarted(t time.Time, chatID models.ChatID) *ChatStarted {
-	return &ChatStarted{baseEvent: baseEvent{Type_: TypeChatStarted, Time_: t}, ChatID: chatID}
+func NewChatStarted(chatID models.ChatID) *ChatStarted {
+	return &ChatStarted{baseEvent: baseEvent{Type_: TypeChatStarted}, ChatID: chatID}
 }

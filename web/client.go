@@ -10,7 +10,6 @@ import (
 	"github.com/nyaruka/chip/core/models"
 	"github.com/nyaruka/chip/web/commands"
 	"github.com/nyaruka/chip/web/events"
-	"github.com/nyaruka/gocommon/dates"
 	"github.com/nyaruka/gocommon/httpx"
 	"github.com/nyaruka/gocommon/jsonx"
 	"github.com/nyaruka/gocommon/uuids"
@@ -83,9 +82,9 @@ func (c *Client) onCommand(cmd commands.Command) error {
 		c.contact = contact
 
 		if isNew {
-			c.Send(events.NewChatStarted(dates.Now(), contact.ChatID))
+			c.Send(events.NewChatStarted(contact.ChatID))
 		} else {
-			c.Send(events.NewChatResumed(dates.Now(), contact.ChatID, contact.Email))
+			c.Send(events.NewChatResumed(contact.ChatID, contact.Email))
 		}
 
 	case *commands.SendMsg:
@@ -98,7 +97,7 @@ func (c *Client) onCommand(cmd commands.Command) error {
 			return fmt.Errorf("error from service: %w", err)
 		}
 
-	case *commands.AckMsg:
+	case *commands.AckChat:
 		if c.contact == nil {
 			log.Debug("chat not started, command ignored")
 			return nil
@@ -120,26 +119,21 @@ func (c *Client) onCommand(cmd commands.Command) error {
 
 		}
 
-		history := make([]events.Event, len(msgs))
+		history := make([]*events.HistoryItem, len(msgs))
 		for i, m := range msgs {
 			if m.Direction == models.DirectionOut {
-				// TODO find logical place for this so that it can be shared with Service.send
-				var user *events.User
-				if m.CreatedByID != models.NilUserID {
-					u, err := c.server.service.Store().GetUser(ctx, m.CreatedByID)
-					if err != nil {
-						log.Error("error fetching user", "error", err)
-					} else {
-						user = events.NewUser(u.Name(), u.Email, u.AvatarURL(c.server.rt.Config))
-					}
+				msgOut, err := m.ToMsgOut(ctx, c.server.service.Store())
+				if err != nil {
+					return fmt.Errorf("error converting outbound message: %w", err)
 				}
-				history[i] = events.NewMsgOut(m.CreatedOn, m.ID, m.Text, m.Attachments, m.Origin(), user)
+
+				history[i] = &events.HistoryItem{MsgOut: msgOut}
 			} else {
-				history[i] = events.NewMsgIn(m.CreatedOn, m.ID, m.Text)
+				history[i] = &events.HistoryItem{MsgIn: m.ToMsgIn()}
 			}
 		}
 
-		c.Send(events.NewHistory(dates.Now(), history))
+		c.Send(events.NewHistory(history))
 
 	case *commands.SetEmail:
 		if c.contact == nil {

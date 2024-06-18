@@ -1,36 +1,20 @@
 package events
 
-import (
-	"time"
-
-	"github.com/nyaruka/chip/core/models"
-)
+import "github.com/nyaruka/chip/core/models"
 
 const TypeHistory string = "history"
 
-const TypeMsgIn string = "msg_in"
-
-type MsgInEvent struct {
-	baseEvent
-
-	MsgID models.MsgID `json:"msg_id"`
-	Text  string       `json:"text"`
-}
-
-func NewMsgIn(t time.Time, id models.MsgID, text string) Event {
-	return &MsgInEvent{
-		baseEvent: baseEvent{Type_: TypeMsgIn, Time_: t},
-		MsgID:     id,
-		Text:      text,
-	}
+type HistoryItem struct {
+	MsgIn  *models.MsgIn  `json:"msg_in,omitempty"`
+	MsgOut *models.MsgOut `json:"msg_out,omitempty"`
 }
 
 type HistoryEvent struct {
 	baseEvent
 
-	History []Event `json:"history"`
+	History []*HistoryItem `json:"history"`
 }
 
-func NewHistory(t time.Time, history []Event) *HistoryEvent {
-	return &HistoryEvent{baseEvent: baseEvent{Type_: TypeHistory, Time_: t}, History: history}
+func NewHistory(history []*HistoryItem) *HistoryEvent {
+	return &HistoryEvent{baseEvent: baseEvent{Type_: TypeHistory}, History: history}
 }

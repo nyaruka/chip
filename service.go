@@ -102,7 +102,7 @@ func (s *Service) StartChat(ctx context.Context, ch *models.Channel, chatID mode
 	}
 
 	// mark chat as ready to send messages
-	if err := s.outbox.SetReady(rc, chatID, true); err != nil {
+	if err := s.outbox.SetReady(rc, ch, chatID, true); err != nil {
 		return nil, false, fmt.Errorf("error setting chat ready: %w", err)
 	}
 
@@ -124,7 +124,7 @@ func (s *Service) ConfirmMsgOut(ctx context.Context, ch *models.Channel, contact
 	// TODO send DLR to courier
 
 	// mark chat as ready to send again
-	if err := s.outbox.SetReady(rc, contact.ChatID, true); err != nil {
+	if err := s.outbox.SetReady(rc, ch, contact.ChatID, true); err != nil {
 		return fmt.Errorf("error setting chat ready: %w", err)
 	}
 
@@ -137,7 +137,7 @@ func (s *Service) CloseChat(ctx context.Context, ch *models.Channel, contact *mo
 	defer rc.Close()
 
 	// mark chat as no longer ready
-	if err := s.outbox.SetReady(rc, contact.ChatID, false); err != nil {
+	if err := s.outbox.SetReady(rc, ch, contact.ChatID, false); err != nil {
 		return fmt.Errorf("error unsetting chat ready: %w", err)
 	}
 
@@ -145,11 +145,11 @@ func (s *Service) CloseChat(ctx context.Context, ch *models.Channel, contact *mo
 	return nil
 }
 
-func (s *Service) QueueMsgOut(ctx context.Context, ch *models.Channel, msg *models.MsgOut) error {
+func (s *Service) QueueMsgOut(ctx context.Context, ch *models.Channel, contact *models.Contact, msg *models.MsgOut) error {
 	rc := s.rt.RP.Get()
 	defer rc.Close()
 
-	if err := s.outbox.AddMessage(rc, msg); err != nil {
+	if err := s.outbox.AddMessage(rc, ch, contact.ChatID, msg); err != nil {
 		return fmt.Errorf("error queuing to outbox: %w", err)
 	}
 
@@ -175,33 +175,19 @@ func (s *Service) sender() {
 func (s *Service) send() {
 	log := slog.With("comp", "service")
 
-	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
-	defer cancel()
-
 	rc := s.rt.RP.Get()
 	defer rc.Close()
 
-	msgs, err := s.outbox.ReadReady(rc)
+	ready, err := s.outbox.ReadReady(rc)
 	if err != nil {
 		log.Error("error reading outboxes", "error", err)
 		return
 	}
 
-	for _, msg := range msgs {
-		client := s.server.GetClient(msg.ChatID)
+	for outbox, msg := range ready {
+		client := s.server.GetClient(outbox.ChatID)
 		if client != nil {
-			// TODO find logical place for this so that it can be shared with Client.onCommand
-			var user *events.User
-			if msg.UserID != models.NilUserID {
-				u, err := s.store.GetUser(ctx, msg.UserID)
-				if err != nil {
-					log.Error("error fetching user", "error", err)
-				} else {
-					user = events.NewUser(u.Name(), u.Email, u.AvatarURL(s.rt.Config))
-				}
-			}
-
-			client.Send(events.NewMsgOut(msg.Time, msg.ID, msg.Text, msg.Attachments, msg.Origin, user))
+			client.Send(events.NewChatMsgOut(msg))
 		}
 	}
 
