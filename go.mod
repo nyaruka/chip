@@ -4,7 +4,7 @@ go 1.22
 
 require (
 	github.com/getsentry/sentry-go v0.28.1
-	github.com/go-chi/chi/v5 v5.0.12
+	github.com/go-chi/chi/v5 v5.0.13
 	github.com/go-playground/validator/v10 v10.22.0
 	github.com/gomodule/redigo v1.9.2
 	github.com/gorilla/websocket v1.5.3
