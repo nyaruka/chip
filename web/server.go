@@ -179,7 +179,7 @@ func (s *Server) handleSend(ctx context.Context, r *http.Request, w http.Respons
 
 	err = s.service.QueueMsgOut(ctx, ch, contact, models.NewMsgOut(payload.Msg.ID, payload.Msg.Text, payload.Msg.Attachments, payload.Msg.Origin, user, time.Now()))
 	if err == nil {
-		w.Write(jsonx.MustMarshal(map[string]any{"status": "queued"}))
+		writeMarshalled(w, http.StatusOK, map[string]any{"status": "queued"})
 	} else {
 		s.log().Error("error handing send request", "error", err)
 
@@ -189,8 +189,7 @@ func (s *Server) handleSend(ctx context.Context, r *http.Request, w http.Respons
 }
 
 func (s *Server) handleIndex(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(200)
-	w.Write(jsonx.MustMarshal(map[string]string{"version": s.rt.Config.Version}))
+	writeMarshalled(w, http.StatusOK, map[string]string{"version": s.rt.Config.Version})
 }
 
 func (s *Server) GetClient(chatID models.ChatID) *Client {
@@ -222,6 +221,11 @@ func (s *Server) log() *slog.Logger {
 }
 
 func writeErrorResponse(w http.ResponseWriter, status int, msg string) {
+	writeMarshalled(w, status, map[string]string{"error": msg})
+}
+
+func writeMarshalled(w http.ResponseWriter, status int, value any) {
+	w.Header().Set("Content-type", "application/json")
 	w.WriteHeader(status)
-	w.Write(jsonx.MustMarshal(map[string]string{"error": msg}))
+	w.Write(jsonx.MustMarshal(value))
 }
