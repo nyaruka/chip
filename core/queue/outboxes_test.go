@@ -40,18 +40,18 @@ func TestOutboxes(t *testing.T) {
 	err = o.AddMessage(rc, ch, "itlu4O6ZE4ZZc07Y5rHxcLoQ", models.NewMsgOut(105, "test", nil, models.MsgOriginFlow, nil, time.Date(2024, 1, 30, 13, 6, 0, 0, time.UTC)))
 	assert.NoError(t, err)
 
-	assertredis.LGetAll(t, rc, "chattest:queue:65vbbDAQCdPdEWlEhDGy4utO@8291264a-4581-4d12-96e5-e9fcfa6e68d9", []string{
+	assertredis.LGetAll(t, rc, "chattest:outbox:65vbbDAQCdPdEWlEhDGy4utO@8291264a-4581-4d12-96e5-e9fcfa6e68d9", []string{
 		`{"id":101,"text":"hi","origin":"chat","user":{"id":1,"email":"bob@nyaruka.com","name":"Bob McFlows"},"time":"2024-01-30T12:55:00Z","_ts":1706619300000}`,
 		`{"id":102,"text":"how can I help","origin":"chat","user":{"id":1,"email":"bob@nyaruka.com","name":"Bob McFlows"},"time":"2024-01-30T13:01:00Z","_ts":1706619660000}`,
 		`{"id":104,"text":"ok","origin":"chat","user":{"id":1,"email":"bob@nyaruka.com","name":"Bob McFlows"},"time":"2024-01-30T13:05:00Z","_ts":1706619900000}`,
 	})
-	assertredis.LGetAll(t, rc, "chattest:queue:3xdF7KhyEiabBiCd3Cst3X28@8291264a-4581-4d12-96e5-e9fcfa6e68d9", []string{
+	assertredis.LGetAll(t, rc, "chattest:outbox:3xdF7KhyEiabBiCd3Cst3X28@8291264a-4581-4d12-96e5-e9fcfa6e68d9", []string{
 		`{"id":103,"text":"hola","origin":"flow","time":"2024-01-30T13:32:00Z","_ts":1706621520000}`,
 	})
-	assertredis.LGetAll(t, rc, "chattest:queue:itlu4O6ZE4ZZc07Y5rHxcLoQ@8291264a-4581-4d12-96e5-e9fcfa6e68d9", []string{
+	assertredis.LGetAll(t, rc, "chattest:outbox:itlu4O6ZE4ZZc07Y5rHxcLoQ@8291264a-4581-4d12-96e5-e9fcfa6e68d9", []string{
 		`{"id":105,"text":"test","origin":"flow","time":"2024-01-30T13:06:00Z","_ts":1706619960000}`,
 	})
-	assertredis.ZGetAll(t, rc, "chattest:queues", map[string]float64{
+	assertredis.ZGetAll(t, rc, "chattest:outboxes", map[string]float64{
 		"65vbbDAQCdPdEWlEhDGy4utO@8291264a-4581-4d12-96e5-e9fcfa6e68d9": 1706619300000,
 		"3xdF7KhyEiabBiCd3Cst3X28@8291264a-4581-4d12-96e5-e9fcfa6e68d9": 1706621520000,
 		"itlu4O6ZE4ZZc07Y5rHxcLoQ@8291264a-4581-4d12-96e5-e9fcfa6e68d9": 1706619960000,
@@ -79,37 +79,37 @@ func TestOutboxes(t *testing.T) {
 	// and remove them from the instance's ready set
 	assertredis.SMembers(t, rc, "chattest:ready:foo1", []string{})
 
-	// nothing actual removed from any of the queues
-	assertredis.LLen(t, rc, "chattest:queue:65vbbDAQCdPdEWlEhDGy4utO@8291264a-4581-4d12-96e5-e9fcfa6e68d9", 3)
-	assertredis.LLen(t, rc, "chattest:queue:3xdF7KhyEiabBiCd3Cst3X28@8291264a-4581-4d12-96e5-e9fcfa6e68d9", 1)
-	assertredis.LLen(t, rc, "chattest:queue:itlu4O6ZE4ZZc07Y5rHxcLoQ@8291264a-4581-4d12-96e5-e9fcfa6e68d9", 1)
+	// nothing actual removed from any of the outboxes
+	assertredis.LLen(t, rc, "chattest:outbox:65vbbDAQCdPdEWlEhDGy4utO@8291264a-4581-4d12-96e5-e9fcfa6e68d9", 3)
+	assertredis.LLen(t, rc, "chattest:outbox:3xdF7KhyEiabBiCd3Cst3X28@8291264a-4581-4d12-96e5-e9fcfa6e68d9", 1)
+	assertredis.LLen(t, rc, "chattest:outbox:itlu4O6ZE4ZZc07Y5rHxcLoQ@8291264a-4581-4d12-96e5-e9fcfa6e68d9", 1)
 
 	hasMore, err := o.RecordSent(rc, ch, "65vbbDAQCdPdEWlEhDGy4utO", 101)
 	assert.NoError(t, err)
 	assert.True(t, hasMore)
 
-	// msg should be removed from the queue for that chat, other chat queues should be unchanged
-	assertredis.LGetAll(t, rc, "chattest:queue:65vbbDAQCdPdEWlEhDGy4utO@8291264a-4581-4d12-96e5-e9fcfa6e68d9", []string{
+	// msg should be removed from the outbox for that chat, other chat outboxes should be unchanged
+	assertredis.LGetAll(t, rc, "chattest:outbox:65vbbDAQCdPdEWlEhDGy4utO@8291264a-4581-4d12-96e5-e9fcfa6e68d9", []string{
 		`{"id":102,"text":"how can I help","origin":"chat","user":{"id":1,"email":"bob@nyaruka.com","name":"Bob McFlows"},"time":"2024-01-30T13:01:00Z","_ts":1706619660000}`,
 		`{"id":104,"text":"ok","origin":"chat","user":{"id":1,"email":"bob@nyaruka.com","name":"Bob McFlows"},"time":"2024-01-30T13:05:00Z","_ts":1706619900000}`,
 	})
-	assertredis.LLen(t, rc, "chattest:queue:3xdF7KhyEiabBiCd3Cst3X28@8291264a-4581-4d12-96e5-e9fcfa6e68d9", 1)
-	assertredis.LLen(t, rc, "chattest:queue:itlu4O6ZE4ZZc07Y5rHxcLoQ@8291264a-4581-4d12-96e5-e9fcfa6e68d9", 1)
+	assertredis.LLen(t, rc, "chattest:outbox:3xdF7KhyEiabBiCd3Cst3X28@8291264a-4581-4d12-96e5-e9fcfa6e68d9", 1)
+	assertredis.LLen(t, rc, "chattest:outbox:itlu4O6ZE4ZZc07Y5rHxcLoQ@8291264a-4581-4d12-96e5-e9fcfa6e68d9", 1)
 
-	assertredis.ZGetAll(t, rc, "chattest:queues", map[string]float64{
+	assertredis.ZGetAll(t, rc, "chattest:outboxes", map[string]float64{
 		"65vbbDAQCdPdEWlEhDGy4utO@8291264a-4581-4d12-96e5-e9fcfa6e68d9": 1706619660000, // updated to new oldest message
 		"3xdF7KhyEiabBiCd3Cst3X28@8291264a-4581-4d12-96e5-e9fcfa6e68d9": 1706621520000,
 		"itlu4O6ZE4ZZc07Y5rHxcLoQ@8291264a-4581-4d12-96e5-e9fcfa6e68d9": 1706619960000,
 	})
 
-	// and queue ID should be back in the ready set
+	// and outbox should be back in the ready set
 	assertredis.SMembers(t, rc, "chattest:ready:foo1", []string{"65vbbDAQCdPdEWlEhDGy4utO@8291264a-4581-4d12-96e5-e9fcfa6e68d9"})
 
-	// try recording sent for a chat with an empty queue
+	// try recording sent for a chat with an empty outbox
 	_, err = o.RecordSent(rc, ch, "A0UGLTWLLs59CrFzj6VpvMlG", 101)
-	assert.EqualError(t, err, "no messages in queue for chat A0UGLTWLLs59CrFzj6VpvMlG")
+	assert.EqualError(t, err, "no messages in outbox for chat A0UGLTWLLs59CrFzj6VpvMlG")
 
 	// try recording sent with an incorrect message ID
 	_, err = o.RecordSent(rc, ch, "65vbbDAQCdPdEWlEhDGy4utO", 999)
-	assert.EqualError(t, err, "expected message id 999 in queue, found 102")
+	assert.EqualError(t, err, "expected message id 999 in outbox, found 102")
 }
