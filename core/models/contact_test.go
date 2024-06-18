@@ -24,7 +24,7 @@ func TestContact(t *testing.T) {
 	defer testsuite.ResetDB()
 
 	orgID := testsuite.InsertOrg(rt, "Nyaruka")
-	testsuite.InsertChannel(rt, "8291264a-4581-4d12-96e5-e9fcfa6e68d9", orgID, "CHP", "WebChat", "123", []string{"webchat"})
+	testsuite.InsertChannel(rt, "8291264a-4581-4d12-96e5-e9fcfa6e68d9", orgID, "CHP", "WebChat", "123", []string{"webchat"}, map[string]any{"secret": "sesame"})
 	bobID := testsuite.InsertContact(rt, orgID, "Bob")
 	urnID := testsuite.InsertURN(rt, orgID, bobID, "webchat:65vbbDAQCdPdEWlEhDGy4utO")
 

@@ -25,8 +25,7 @@ func newChatStartedEvent() Event {
 }
 
 type msgIn struct {
-	Text        string   `json:"text"`
-	Attachments []string `json:"attachments"`
+	Text string `json:"text"`
 }
 
 type msgInEvent struct {
@@ -41,19 +40,25 @@ func newMsgInEvent(text string) Event {
 	}
 }
 
-type msgStatus struct {
-	MsgID  models.MsgID     `json:"msg_id"`
-	Status models.MsgStatus `json:"status"`
+type MsgStatus string
+
+const (
+	MsgStatusDelivered MsgStatus = "delivered"
+)
+
+type msgStatusUpdate struct {
+	MsgID  models.MsgID `json:"msg_id"`
+	Status MsgStatus    `json:"status"`
 }
 
 type msgStatusEvent struct {
 	baseEvent
-	Status msgStatus `json:"status"`
+	Status msgStatusUpdate `json:"status"`
 }
 
-func newMsgStatusEvent(msgID models.MsgID, status models.MsgStatus) Event {
+func newMsgStatusEvent(msgID models.MsgID, status MsgStatus) Event {
 	return &msgStatusEvent{
 		baseEvent: baseEvent{Type_: "msg_status"},
-		Status:    msgStatus{MsgID: msgID, Status: status},
+		Status:    msgStatusUpdate{MsgID: msgID, Status: status},
 	}
 }

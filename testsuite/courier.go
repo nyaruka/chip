@@ -1,6 +1,7 @@
 package testsuite
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/nyaruka/chip/core/models"
@@ -31,6 +32,15 @@ func (c *MockCourier) CreateMsg(ch *models.Channel, contact *models.Contact, tex
 	c.Calls = append(c.Calls, fmt.Sprintf("CreateMsg(%s, %d, '%s')", ch.UUID, contact.ID, text))
 
 	InsertIncomingMsg(c.rt, ch.OrgID, ch.ID, contact.ID, contact.URNID, text, dates.Now())
+
+	return nil
+}
+
+func (c *MockCourier) ReportDelivered(ch *models.Channel, contact *models.Contact, msgID models.MsgID) error {
+	c.Calls = append(c.Calls, fmt.Sprintf("ReportDelivered(%s, %d, %d)", ch.UUID, contact.ID, msgID))
+
+	_, err := c.rt.DB.ExecContext(context.Background(), `UPDATE msgs_msg SET status = 'D', modified_on = NOW() WHERE id = $1 AND channel_id = $2`, msgID, ch.ID)
+	noError(err)
 
 	return nil
 }

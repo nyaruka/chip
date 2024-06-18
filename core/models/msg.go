@@ -11,7 +11,6 @@ import (
 
 type MsgID int64
 type MsgOrigin string
-type MsgStatus string
 type MsgDirection string
 
 const (

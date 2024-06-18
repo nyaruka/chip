@@ -12,6 +12,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/nyaruka/chip/core/models"
+	"github.com/nyaruka/chip/core/queue"
 	"github.com/nyaruka/chip/runtime"
 	"github.com/nyaruka/gocommon/httpx"
 	"github.com/nyaruka/gocommon/jsonx"
@@ -22,7 +23,7 @@ type Service interface {
 	Store() models.Store
 	StartChat(context.Context, *models.Channel, models.ChatID) (*models.Contact, bool, error)
 	CreateMsgIn(context.Context, *models.Channel, *models.Contact, string) error
-	ConfirmDelivery(context.Context, *models.Channel, *models.Contact, models.MsgID) error
+	ConfirmDelivery(context.Context, *models.Channel, *models.Contact, queue.ItemID) error
 	CloseChat(context.Context, *models.Channel, *models.Contact) error
 	QueueMsgOut(context.Context, *models.Channel, *models.Contact, *models.MsgOut) error
 }

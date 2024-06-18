@@ -5,6 +5,8 @@ import (
 	"database/sql"
 	"fmt"
 	"log/slog"
+	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -117,14 +119,21 @@ func (s *Service) CreateMsgIn(ctx context.Context, ch *models.Channel, contact *
 	return nil
 }
 
-func (s *Service) ConfirmDelivery(ctx context.Context, ch *models.Channel, contact *models.Contact, msgID models.MsgID) error {
+func (s *Service) ConfirmDelivery(ctx context.Context, ch *models.Channel, contact *models.Contact, itemID queue.ItemID) error {
 	rc := s.rt.RP.Get()
 	defer rc.Close()
 
-	// TODO send DLR to courier
+	// if this is a message, tell courier it was delivered
+	if strings.HasPrefix(string(itemID), "m") {
+		msgID, err := strconv.Atoi(strings.TrimPrefix(string(itemID), "m"))
+		if err != nil {
+			return fmt.Errorf("error parsing msg id: %w", err)
+		}
 
-	// mark chat as ready to send again
-	itemID := queue.ItemID(fmt.Sprintf("m%d", msgID))
+		if err := s.courier.ReportDelivered(ch, contact, models.MsgID(msgID)); err != nil {
+			return fmt.Errorf("error notifying courier of delivery: %w", err)
+		}
+	}
 
 	if _, err := s.outboxes.RecordSent(rc, ch, contact.ChatID, itemID); err != nil {
 		return fmt.Errorf("error setting chat ready: %w", err)

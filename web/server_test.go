@@ -41,7 +41,7 @@ func TestServer(t *testing.T) {
 	assert.Equal(t, `{"version":"Dev"}`, string(trace.ResponseBody))
 
 	orgID := testsuite.InsertOrg(rt, "Nyaruka")
-	testsuite.InsertChannel(rt, "8291264a-4581-4d12-96e5-e9fcfa6e68d9", orgID, "CHP", "WebChat", "123", []string{"webchat"})
+	testsuite.InsertChannel(rt, "8291264a-4581-4d12-96e5-e9fcfa6e68d9", orgID, "CHP", "WebChat", "123", []string{"webchat"}, map[string]any{"secret": "sesame"})
 	ch, err := models.LoadChannel(ctx, rt, "8291264a-4581-4d12-96e5-e9fcfa6e68d9")
 	require.NoError(t, err)
 
@@ -106,6 +106,8 @@ func TestServer(t *testing.T) {
 	// client acknowledges receipt of the message
 	client.Send(t, `{"type": "ack_chat", "msg_id": 123}`)
 
-	time.Sleep(100 * time.Millisecond)
+	assert.Equal(t, "ReportDelivered(8291264a-4581-4d12-96e5-e9fcfa6e68d9, 1, 123)", mockCourier.Calls[2])
+
 	client.Close(t)
+	time.Sleep(100 * time.Millisecond)
 }

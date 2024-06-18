@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/nyaruka/chip/core/models"
+	"github.com/nyaruka/chip/core/queue"
 	"github.com/nyaruka/chip/web/commands"
 	"github.com/nyaruka/chip/web/events"
 	"github.com/nyaruka/gocommon/httpx"
@@ -103,7 +104,10 @@ func (c *Client) onCommand(cmd commands.Command) error {
 			return nil
 		}
 
-		if err := c.server.service.ConfirmDelivery(ctx, c.channel, c.contact, typed.MsgID); err != nil {
+		// for now all acks are msg ids
+		itemID := queue.ItemID(fmt.Sprintf("m%d", typed.MsgID))
+
+		if err := c.server.service.ConfirmDelivery(ctx, c.channel, c.contact, itemID); err != nil {
 			return fmt.Errorf("error from service: %w", err)
 		}
 

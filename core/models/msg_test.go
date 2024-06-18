@@ -16,7 +16,7 @@ func TestLoadContactMessages(t *testing.T) {
 	defer testsuite.ResetDB()
 
 	orgID := testsuite.InsertOrg(rt, "Nyaruka")
-	chanID := testsuite.InsertChannel(rt, "8291264a-4581-4d12-96e5-e9fcfa6e68d9", orgID, "CHP", "WebChat", "123", []string{"webchat"})
+	chanID := testsuite.InsertChannel(rt, "8291264a-4581-4d12-96e5-e9fcfa6e68d9", orgID, "CHP", "WebChat", "123", []string{"webchat"}, map[string]any{"secret": "sesame"})
 	annID := testsuite.InsertContact(rt, orgID, "Ann")
 	annURNID := testsuite.InsertURN(rt, orgID, annID, "webchat:78cddDAQCdPdEWlEhDGy4utO")
 	bobID := testsuite.InsertContact(rt, orgID, "Bob")
@@ -75,7 +75,7 @@ func TestDMMsgToMsgInAndOut(t *testing.T) {
 	defer testsuite.ResetDB()
 
 	orgID := testsuite.InsertOrg(rt, "Nyaruka")
-	chanID := testsuite.InsertChannel(rt, "8291264a-4581-4d12-96e5-e9fcfa6e68d9", orgID, "CHP", "WebChat", "123", []string{"webchat"})
+	chanID := testsuite.InsertChannel(rt, "8291264a-4581-4d12-96e5-e9fcfa6e68d9", orgID, "CHP", "WebChat", "123", []string{"webchat"}, map[string]any{"secret": "sesame"})
 	bobID := testsuite.InsertContact(rt, orgID, "Bob")
 	bobURNID := testsuite.InsertURN(rt, orgID, bobID, "webchat:65vbbDAQCdPdEWlEhDGy4utO")
 

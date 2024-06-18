@@ -16,7 +16,7 @@ func TestStore(t *testing.T) {
 	store := models.NewStore(rt)
 
 	orgID := testsuite.InsertOrg(rt, "Nyaruka")
-	testsuite.InsertChannel(rt, "8291264a-4581-4d12-96e5-e9fcfa6e68d9", orgID, "CHP", "WebChat", "123", []string{"webchat"})
+	testsuite.InsertChannel(rt, "8291264a-4581-4d12-96e5-e9fcfa6e68d9", orgID, "CHP", "WebChat", "123", []string{"webchat"}, map[string]any{"secret": "sesame"})
 	bobID := testsuite.InsertUser(rt, "bob@nyaruka.com", "Bob", "McFlows", "")
 
 	// no such channel
