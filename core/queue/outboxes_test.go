@@ -23,7 +23,7 @@ func TestOutboxes(t *testing.T) {
 	bob, _ := models.LoadUser(ctx, rt, bobID)
 	ch, _ := models.LoadChannel(ctx, rt, "8291264a-4581-4d12-96e5-e9fcfa6e68d9")
 
-	o := &queue.Outbox{KeyBase: "chattest", InstanceID: "foo1"}
+	o := &queue.Outboxes{KeyBase: "chattest", InstanceID: "foo1"}
 
 	rc := rt.RP.Get()
 	defer rc.Close()
@@ -72,9 +72,9 @@ func TestOutboxes(t *testing.T) {
 	// reading should now give us their oldest messages
 	ready, err = o.ReadReady(rc)
 	assert.NoError(t, err)
-	assert.ElementsMatch(t, []queue.Queue{{"8291264a-4581-4d12-96e5-e9fcfa6e68d9", "65vbbDAQCdPdEWlEhDGy4utO"}, {"8291264a-4581-4d12-96e5-e9fcfa6e68d9", "itlu4O6ZE4ZZc07Y5rHxcLoQ"}}, maps.Keys(ready))
-	//assert.Equal(t, models.MsgID(101), msgs[0].ID)
-	//assert.Equal(t, models.MsgID(105), msgs[1].ID)
+	assert.ElementsMatch(t, []queue.Outbox{{"8291264a-4581-4d12-96e5-e9fcfa6e68d9", "65vbbDAQCdPdEWlEhDGy4utO"}, {"8291264a-4581-4d12-96e5-e9fcfa6e68d9", "itlu4O6ZE4ZZc07Y5rHxcLoQ"}}, maps.Keys(ready))
+	assert.Equal(t, models.MsgID(101), ready[queue.Outbox{"8291264a-4581-4d12-96e5-e9fcfa6e68d9", "65vbbDAQCdPdEWlEhDGy4utO"}].ID)
+	assert.Equal(t, models.MsgID(105), ready[queue.Outbox{"8291264a-4581-4d12-96e5-e9fcfa6e68d9", "itlu4O6ZE4ZZc07Y5rHxcLoQ"}].ID)
 
 	// and remove them from the instance's ready set
 	assertredis.SMembers(t, rc, "chattest:ready:foo1", []string{})

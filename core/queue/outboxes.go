@@ -10,30 +10,30 @@ import (
 	"github.com/nyaruka/gocommon/jsonx"
 )
 
-//go:embed lua/outbox_read_ready.lua
-var outboxReadReady string
-var outboxReadReadyScript = redis.NewScript(2, outboxReadReady)
+//go:embed lua/outboxes_read_ready.lua
+var outboxesReadReady string
+var outboxesReadReadyScript = redis.NewScript(2, outboxesReadReady)
 
-//go:embed lua/outbox_record_sent.lua
-var outboxRecordSent string
-var outboxRecordSentScript = redis.NewScript(3, outboxRecordSent)
+//go:embed lua/outboxes_record_sent.lua
+var outboxesRecordSent string
+var outboxesRecordSentScript = redis.NewScript(3, outboxesRecordSent)
 
-type Queue struct {
+type Outbox struct {
 	ChannelUUID models.ChannelUUID
 	ChatID      models.ChatID
 }
 
-func (q Queue) String() string {
+func (q Outbox) String() string {
 	return fmt.Sprintf("%s@%s", q.ChatID, q.ChannelUUID)
 }
 
-type Outbox struct {
+type Outboxes struct {
 	KeyBase    string
 	InstanceID string
 }
 
-func (o *Outbox) SetReady(rc redis.Conn, ch *models.Channel, chatID models.ChatID, ready bool) error {
-	queue := Queue{ch.UUID, chatID}
+func (o *Outboxes) SetReady(rc redis.Conn, ch *models.Channel, chatID models.ChatID, ready bool) error {
+	queue := Outbox{ch.UUID, chatID}
 
 	var err error
 	if ready {
@@ -44,8 +44,8 @@ func (o *Outbox) SetReady(rc redis.Conn, ch *models.Channel, chatID models.ChatI
 	return err
 }
 
-func (o *Outbox) AddMessage(rc redis.Conn, ch *models.Channel, chatID models.ChatID, m *models.MsgOut) error {
-	queue := Queue{ch.UUID, chatID}
+func (o *Outboxes) AddMessage(rc redis.Conn, ch *models.Channel, chatID models.ChatID, m *models.MsgOut) error {
+	queue := Outbox{ch.UUID, chatID}
 
 	rc.Send("MULTI")
 	rc.Send("RPUSH", o.queueKey(queue), encodeMsg(m))
@@ -54,13 +54,13 @@ func (o *Outbox) AddMessage(rc redis.Conn, ch *models.Channel, chatID models.Cha
 	return err
 }
 
-func (o *Outbox) ReadReady(rc redis.Conn) (map[Queue]*models.MsgOut, error) {
-	pairs, err := redis.ByteSlices(outboxReadReadyScript.Do(rc, o.queuesKey(), o.readyKey(), o.KeyBase))
+func (o *Outboxes) ReadReady(rc redis.Conn) (map[Outbox]*models.MsgOut, error) {
+	pairs, err := redis.ByteSlices(outboxesReadReadyScript.Do(rc, o.queuesKey(), o.readyKey(), o.KeyBase))
 	if err != nil && err != redis.ErrNil {
 		return nil, err
 	}
 
-	ready := make(map[Queue]*models.MsgOut, len(pairs)/2)
+	ready := make(map[Outbox]*models.MsgOut, len(pairs)/2)
 	for i := 0; i < len(pairs); i += 2 {
 		queue := string(pairs[i])
 		item := pairs[i+1]
@@ -70,10 +70,10 @@ func (o *Outbox) ReadReady(rc redis.Conn) (map[Queue]*models.MsgOut, error) {
 	return ready, nil
 }
 
-func (o *Outbox) RecordSent(rc redis.Conn, ch *models.Channel, chatID models.ChatID, msgID models.MsgID) (bool, error) {
-	queue := Queue{ch.UUID, chatID}
+func (o *Outboxes) RecordSent(rc redis.Conn, ch *models.Channel, chatID models.ChatID, msgID models.MsgID) (bool, error) {
+	queue := Outbox{ch.UUID, chatID}
 
-	result, err := redis.Strings(outboxRecordSentScript.Do(rc, o.queuesKey(), o.queueKey(queue), o.readyKey(), queue.String(), msgID))
+	result, err := redis.Strings(outboxesRecordSentScript.Do(rc, o.queuesKey(), o.queueKey(queue), o.readyKey(), queue.String(), msgID))
 	if err != nil {
 		return false, err
 	}
@@ -86,15 +86,15 @@ func (o *Outbox) RecordSent(rc redis.Conn, ch *models.Channel, chatID models.Cha
 	return result[1] == "true", nil
 }
 
-func (o *Outbox) readyKey() string {
+func (o *Outboxes) readyKey() string {
 	return fmt.Sprintf("%s:ready:%s", o.KeyBase, o.InstanceID)
 }
 
-func (o *Outbox) queuesKey() string {
+func (o *Outboxes) queuesKey() string {
 	return fmt.Sprintf("%s:queues", o.KeyBase)
 }
 
-func (o *Outbox) queueKey(queue Queue) string {
+func (o *Outboxes) queueKey(queue Outbox) string {
 	return fmt.Sprintf("%s:queue:%s", o.KeyBase, queue)
 }
 
@@ -115,7 +115,7 @@ func decodeMsg(b []byte) *models.MsgOut {
 	return m
 }
 
-func decodeQueue(q string) Queue {
+func decodeQueue(q string) Outbox {
 	parts := strings.Split(q, "@")
-	return Queue{models.ChannelUUID(parts[1]), models.ChatID(parts[0])}
+	return Outbox{models.ChannelUUID(parts[1]), models.ChatID(parts[0])}
 }

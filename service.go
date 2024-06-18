@@ -17,11 +17,11 @@ import (
 )
 
 type Service struct {
-	rt      *runtime.Runtime
-	server  *web.Server
-	store   models.Store
-	outbox  *queue.Outbox
-	courier courier.Courier
+	rt       *runtime.Runtime
+	server   *web.Server
+	store    models.Store
+	outboxes *queue.Outboxes
+	courier  courier.Courier
 
 	senderStop chan bool
 	senderWait sync.WaitGroup
@@ -31,7 +31,7 @@ func NewService(rt *runtime.Runtime, courier courier.Courier) *Service {
 	s := &Service{
 		rt:         rt,
 		store:      models.NewStore(rt),
-		outbox:     &queue.Outbox{KeyBase: "chat", InstanceID: rt.Config.InstanceID},
+		outboxes:   &queue.Outboxes{KeyBase: "chat", InstanceID: rt.Config.InstanceID},
 		courier:    courier,
 		senderStop: make(chan bool),
 	}
@@ -102,7 +102,7 @@ func (s *Service) StartChat(ctx context.Context, ch *models.Channel, chatID mode
 	}
 
 	// mark chat as ready to send messages
-	if err := s.outbox.SetReady(rc, ch, chatID, true); err != nil {
+	if err := s.outboxes.SetReady(rc, ch, chatID, true); err != nil {
 		return nil, false, fmt.Errorf("error setting chat ready: %w", err)
 	}
 
@@ -124,7 +124,7 @@ func (s *Service) ConfirmMsgOut(ctx context.Context, ch *models.Channel, contact
 	// TODO send DLR to courier
 
 	// mark chat as ready to send again
-	if err := s.outbox.SetReady(rc, ch, contact.ChatID, true); err != nil {
+	if err := s.outboxes.SetReady(rc, ch, contact.ChatID, true); err != nil {
 		return fmt.Errorf("error setting chat ready: %w", err)
 	}
 
@@ -137,7 +137,7 @@ func (s *Service) CloseChat(ctx context.Context, ch *models.Channel, contact *mo
 	defer rc.Close()
 
 	// mark chat as no longer ready
-	if err := s.outbox.SetReady(rc, ch, contact.ChatID, false); err != nil {
+	if err := s.outboxes.SetReady(rc, ch, contact.ChatID, false); err != nil {
 		return fmt.Errorf("error unsetting chat ready: %w", err)
 	}
 
@@ -149,7 +149,7 @@ func (s *Service) QueueMsgOut(ctx context.Context, ch *models.Channel, contact *
 	rc := s.rt.RP.Get()
 	defer rc.Close()
 
-	if err := s.outbox.AddMessage(rc, ch, contact.ChatID, msg); err != nil {
+	if err := s.outboxes.AddMessage(rc, ch, contact.ChatID, msg); err != nil {
 		return fmt.Errorf("error queuing to outbox: %w", err)
 	}
 
@@ -178,7 +178,7 @@ func (s *Service) send() {
 	rc := s.rt.RP.Get()
 	defer rc.Close()
 
-	ready, err := s.outbox.ReadReady(rc)
+	ready, err := s.outboxes.ReadReady(rc)
 	if err != nil {
 		log.Error("error reading outboxes", "error", err)
 		return
