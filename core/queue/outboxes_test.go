@@ -41,15 +41,15 @@ func TestOutboxes(t *testing.T) {
 	assert.NoError(t, err)
 
 	assertredis.LGetAll(t, rc, "chattest:outbox:65vbbDAQCdPdEWlEhDGy4utO@8291264a-4581-4d12-96e5-e9fcfa6e68d9", []string{
-		`{"id":101,"text":"hi","origin":"chat","user":{"id":1,"email":"bob@nyaruka.com","name":"Bob McFlows"},"time":"2024-01-30T12:55:00Z","_ts":1706619300000}`,
-		`{"id":102,"text":"how can I help","origin":"chat","user":{"id":1,"email":"bob@nyaruka.com","name":"Bob McFlows"},"time":"2024-01-30T13:01:00Z","_ts":1706619660000}`,
-		`{"id":104,"text":"ok","origin":"chat","user":{"id":1,"email":"bob@nyaruka.com","name":"Bob McFlows"},"time":"2024-01-30T13:05:00Z","_ts":1706619900000}`,
+		`{"id":"m101","ts":1706619300000,"msg":{"id":101,"text":"hi","origin":"chat","user":{"id":1,"email":"bob@nyaruka.com","name":"Bob McFlows"},"time":"2024-01-30T12:55:00Z"}}`,
+		`{"id":"m102","ts":1706619660000,"msg":{"id":102,"text":"how can I help","origin":"chat","user":{"id":1,"email":"bob@nyaruka.com","name":"Bob McFlows"},"time":"2024-01-30T13:01:00Z"}}`,
+		`{"id":"m104","ts":1706619900000,"msg":{"id":104,"text":"ok","origin":"chat","user":{"id":1,"email":"bob@nyaruka.com","name":"Bob McFlows"},"time":"2024-01-30T13:05:00Z"}}`,
 	})
 	assertredis.LGetAll(t, rc, "chattest:outbox:3xdF7KhyEiabBiCd3Cst3X28@8291264a-4581-4d12-96e5-e9fcfa6e68d9", []string{
-		`{"id":103,"text":"hola","origin":"flow","time":"2024-01-30T13:32:00Z","_ts":1706621520000}`,
+		`{"id":"m103","ts":1706621520000,"msg":{"id":103,"text":"hola","origin":"flow","time":"2024-01-30T13:32:00Z"}}`,
 	})
 	assertredis.LGetAll(t, rc, "chattest:outbox:itlu4O6ZE4ZZc07Y5rHxcLoQ@8291264a-4581-4d12-96e5-e9fcfa6e68d9", []string{
-		`{"id":105,"text":"test","origin":"flow","time":"2024-01-30T13:06:00Z","_ts":1706619960000}`,
+		`{"id":"m105","ts":1706619960000,"msg":{"id":105,"text":"test","origin":"flow","time":"2024-01-30T13:06:00Z"}}`,
 	})
 	assertredis.ZGetAll(t, rc, "chattest:outboxes", map[string]float64{
 		"65vbbDAQCdPdEWlEhDGy4utO@8291264a-4581-4d12-96e5-e9fcfa6e68d9": 1706619300000,
@@ -73,8 +73,8 @@ func TestOutboxes(t *testing.T) {
 	ready, err = o.ReadReady(rc)
 	assert.NoError(t, err)
 	assert.ElementsMatch(t, []queue.Outbox{{"8291264a-4581-4d12-96e5-e9fcfa6e68d9", "65vbbDAQCdPdEWlEhDGy4utO"}, {"8291264a-4581-4d12-96e5-e9fcfa6e68d9", "itlu4O6ZE4ZZc07Y5rHxcLoQ"}}, maps.Keys(ready))
-	assert.Equal(t, models.MsgID(101), ready[queue.Outbox{"8291264a-4581-4d12-96e5-e9fcfa6e68d9", "65vbbDAQCdPdEWlEhDGy4utO"}].ID)
-	assert.Equal(t, models.MsgID(105), ready[queue.Outbox{"8291264a-4581-4d12-96e5-e9fcfa6e68d9", "itlu4O6ZE4ZZc07Y5rHxcLoQ"}].ID)
+	assert.Equal(t, queue.ItemID("m101"), ready[queue.Outbox{"8291264a-4581-4d12-96e5-e9fcfa6e68d9", "65vbbDAQCdPdEWlEhDGy4utO"}].ID)
+	assert.Equal(t, queue.ItemID("m105"), ready[queue.Outbox{"8291264a-4581-4d12-96e5-e9fcfa6e68d9", "itlu4O6ZE4ZZc07Y5rHxcLoQ"}].ID)
 
 	// and remove them from the instance's ready set
 	assertredis.SMembers(t, rc, "chattest:ready:foo1", []string{})
@@ -84,14 +84,14 @@ func TestOutboxes(t *testing.T) {
 	assertredis.LLen(t, rc, "chattest:outbox:3xdF7KhyEiabBiCd3Cst3X28@8291264a-4581-4d12-96e5-e9fcfa6e68d9", 1)
 	assertredis.LLen(t, rc, "chattest:outbox:itlu4O6ZE4ZZc07Y5rHxcLoQ@8291264a-4581-4d12-96e5-e9fcfa6e68d9", 1)
 
-	hasMore, err := o.RecordSent(rc, ch, "65vbbDAQCdPdEWlEhDGy4utO", 101)
+	hasMore, err := o.RecordSent(rc, ch, "65vbbDAQCdPdEWlEhDGy4utO", "m101")
 	assert.NoError(t, err)
 	assert.True(t, hasMore)
 
 	// msg should be removed from the outbox for that chat, other chat outboxes should be unchanged
 	assertredis.LGetAll(t, rc, "chattest:outbox:65vbbDAQCdPdEWlEhDGy4utO@8291264a-4581-4d12-96e5-e9fcfa6e68d9", []string{
-		`{"id":102,"text":"how can I help","origin":"chat","user":{"id":1,"email":"bob@nyaruka.com","name":"Bob McFlows"},"time":"2024-01-30T13:01:00Z","_ts":1706619660000}`,
-		`{"id":104,"text":"ok","origin":"chat","user":{"id":1,"email":"bob@nyaruka.com","name":"Bob McFlows"},"time":"2024-01-30T13:05:00Z","_ts":1706619900000}`,
+		`{"id":"m102","ts":1706619660000,"msg":{"id":102,"text":"how can I help","origin":"chat","user":{"id":1,"email":"bob@nyaruka.com","name":"Bob McFlows"},"time":"2024-01-30T13:01:00Z"}}`,
+		`{"id":"m104","ts":1706619900000,"msg":{"id":104,"text":"ok","origin":"chat","user":{"id":1,"email":"bob@nyaruka.com","name":"Bob McFlows"},"time":"2024-01-30T13:05:00Z"}}`,
 	})
 	assertredis.LLen(t, rc, "chattest:outbox:3xdF7KhyEiabBiCd3Cst3X28@8291264a-4581-4d12-96e5-e9fcfa6e68d9", 1)
 	assertredis.LLen(t, rc, "chattest:outbox:itlu4O6ZE4ZZc07Y5rHxcLoQ@8291264a-4581-4d12-96e5-e9fcfa6e68d9", 1)
@@ -106,10 +106,10 @@ func TestOutboxes(t *testing.T) {
 	assertredis.SMembers(t, rc, "chattest:ready:foo1", []string{"65vbbDAQCdPdEWlEhDGy4utO@8291264a-4581-4d12-96e5-e9fcfa6e68d9"})
 
 	// try recording sent for a chat with an empty outbox
-	_, err = o.RecordSent(rc, ch, "A0UGLTWLLs59CrFzj6VpvMlG", 101)
-	assert.EqualError(t, err, "no messages in outbox for chat A0UGLTWLLs59CrFzj6VpvMlG")
+	_, err = o.RecordSent(rc, ch, "A0UGLTWLLs59CrFzj6VpvMlG", "m101")
+	assert.EqualError(t, err, "outbox empty for chat A0UGLTWLLs59CrFzj6VpvMlG")
 
 	// try recording sent with an incorrect message ID
-	_, err = o.RecordSent(rc, ch, "65vbbDAQCdPdEWlEhDGy4utO", 999)
-	assert.EqualError(t, err, "expected message id 999 in outbox, found 102")
+	_, err = o.RecordSent(rc, ch, "65vbbDAQCdPdEWlEhDGy4utO", "m999")
+	assert.EqualError(t, err, "expected item id m999 in outbox, found m102")
 }

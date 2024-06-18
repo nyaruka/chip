@@ -117,14 +117,16 @@ func (s *Service) CreateMsgIn(ctx context.Context, ch *models.Channel, contact *
 	return nil
 }
 
-func (s *Service) ConfirmMsgOut(ctx context.Context, ch *models.Channel, contact *models.Contact, msgID models.MsgID) error {
+func (s *Service) ConfirmDelivery(ctx context.Context, ch *models.Channel, contact *models.Contact, msgID models.MsgID) error {
 	rc := s.rt.RP.Get()
 	defer rc.Close()
 
 	// TODO send DLR to courier
 
 	// mark chat as ready to send again
-	if _, err := s.outboxes.RecordSent(rc, ch, contact.ChatID, msgID); err != nil {
+	itemID := queue.ItemID(fmt.Sprintf("m%d", msgID))
+
+	if _, err := s.outboxes.RecordSent(rc, ch, contact.ChatID, itemID); err != nil {
 		return fmt.Errorf("error setting chat ready: %w", err)
 	}
 
@@ -184,10 +186,10 @@ func (s *Service) send() {
 		return
 	}
 
-	for outbox, msg := range ready {
+	for outbox, item := range ready {
 		client := s.server.GetClient(outbox.ChatID)
 		if client != nil {
-			client.Send(events.NewChatMsgOut(msg))
+			client.Send(events.NewChatMsgOut(item.Msg))
 		}
 	}
 

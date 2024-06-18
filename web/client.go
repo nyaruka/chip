@@ -103,7 +103,7 @@ func (c *Client) onCommand(cmd commands.Command) error {
 			return nil
 		}
 
-		if err := c.server.service.ConfirmMsgOut(ctx, c.channel, c.contact, typed.MsgID); err != nil {
+		if err := c.server.service.ConfirmDelivery(ctx, c.channel, c.contact, typed.MsgID); err != nil {
 			return fmt.Errorf("error from service: %w", err)
 		}
 

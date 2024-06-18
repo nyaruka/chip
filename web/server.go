@@ -22,7 +22,7 @@ type Service interface {
 	Store() models.Store
 	StartChat(context.Context, *models.Channel, models.ChatID) (*models.Contact, bool, error)
 	CreateMsgIn(context.Context, *models.Channel, *models.Contact, string) error
-	ConfirmMsgOut(context.Context, *models.Channel, *models.Contact, models.MsgID) error
+	ConfirmDelivery(context.Context, *models.Channel, *models.Contact, models.MsgID) error
 	CloseChat(context.Context, *models.Channel, *models.Contact) error
 	QueueMsgOut(context.Context, *models.Channel, *models.Contact, *models.MsgOut) error
 }
