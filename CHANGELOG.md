@@ -1,3 +1,11 @@
+v0.1.0 (2024-06-18)
+-------------------------
+ * Update deps
+ * Fix not setting content type on server responses
+ * Add support for msg status updates via courier
+ * Refactor outboxes to support more than just messages
+ * Refactor representations of messages and users
+
 v0.0.9 (2024-05-29)
 -------------------------
  * Add index page we can use for load balancer
