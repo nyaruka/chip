@@ -124,7 +124,7 @@ func (s *Service) ConfirmMsgOut(ctx context.Context, ch *models.Channel, contact
 	// TODO send DLR to courier
 
 	// mark chat as ready to send again
-	if err := s.outboxes.SetReady(rc, ch, contact.ChatID, true); err != nil {
+	if _, err := s.outboxes.RecordSent(rc, ch, contact.ChatID, msgID); err != nil {
 		return fmt.Errorf("error setting chat ready: %w", err)
 	}
 
