@@ -13,6 +13,13 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestFoo(t *testing.T) {
+	testsuite.Runtime()
+	defer testsuite.ResetRedis()
+	defer testsuite.ResetDB()
+
+}
+
 func TestService(t *testing.T) {
 	ctx, rt := testsuite.Runtime()
 
@@ -48,7 +55,7 @@ func TestService(t *testing.T) {
 	assert.Equal(t, []string{"StartChat(8291264a-4581-4d12-96e5-e9fcfa6e68d9, itlu4O6ZE4ZZc07Y5rHxcLoQ)"}, mockCourier.Calls)
 
 	// server should send a chat_started event back to the client
-	assert.JSONEq(t, `{"type":"chat_started","time":"2024-05-02T16:05:04Z","chat_id":"itlu4O6ZE4ZZc07Y5rHxcLoQ"}`, client.Read(t))
+	assert.JSONEq(t, `{"type":"chat_started","chat_id":"itlu4O6ZE4ZZc07Y5rHxcLoQ"}`, client.Read(t))
 
 	client.Send(t, `{"type": "send_msg", "text": "hello"}`)
 
@@ -69,21 +76,21 @@ func TestService(t *testing.T) {
 	// server should send a history event back to the client
 	assert.JSONEq(t, `{
 		"type": "history",
-		"time": "2024-05-02T16:05:06Z",
 		"history": [
-			{"type": "msg_in", "time": "2024-05-02T16:05:05Z", "msg_id":1, "text": "hello"}
+			{"msg_in": {"id":1, "text": "hello", "time": "2024-05-02T16:05:04Z"}}
 		]
 	}`, client.Read(t))
 
 	// queue a message to be sent to the client
-	err = svc.QueueMsgOut(ctx, ch, models.NewMsgOut(123, ch, "itlu4O6ZE4ZZc07Y5rHxcLoQ", "welcome", nil, models.MsgOriginBroadcast, nil, dates.Now()))
+	err = svc.QueueMsgOut(ctx, ch, contact, models.NewMsgOut(123, "welcome", nil, models.MsgOriginBroadcast, nil, dates.Now()))
 	assert.NoError(t, err)
 
 	// and check it is sent to the client
-	assert.JSONEq(t, `{"type": "msg_out", "msg_id": 123, "text": "welcome", "origin": "broadcast", "time": "2024-05-02T16:05:07Z"}`, client.Read(t))
+	assert.JSONEq(t, `{"type": "chat_out", "msg_out": {"id": 123, "text": "welcome", "origin": "broadcast", "time": "2024-05-02T16:05:05Z"}}`, client.Read(t))
 
 	// client acknowledges receipt of the message
-	client.Send(t, `{"type": "ack_msg", "msg_id": 123}`)
+	client.Send(t, `{"type": "ack_chat", "msg_id": 123}`)
 
+	time.Sleep(100 * time.Millisecond)
 	client.Close(t)
 }

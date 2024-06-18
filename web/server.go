@@ -24,7 +24,7 @@ type Service interface {
 	CreateMsgIn(context.Context, *models.Channel, *models.Contact, string) error
 	ConfirmMsgOut(context.Context, *models.Channel, *models.Contact, models.MsgID) error
 	CloseChat(context.Context, *models.Channel, *models.Contact) error
-	QueueMsgOut(context.Context, *models.Channel, *models.MsgOut) error
+	QueueMsgOut(context.Context, *models.Channel, *models.Contact, *models.MsgOut) error
 }
 
 type Server struct {
@@ -161,8 +161,13 @@ func (s *Server) handleSend(ctx context.Context, r *http.Request, w http.Respons
 		return
 	}
 
+	contact, err := models.LoadContact(ctx, s.rt, ch.OrgID, payload.ChatID)
+	if err != nil {
+		writeErrorResponse(w, http.StatusBadRequest, fmt.Sprintf("error loading contact with chat id %s: %s", payload.ChatID, err))
+		return
+	}
+
 	var user *models.User
-	var err error
 	if payload.Msg.UserID != models.NilUserID {
 		user, err = s.service.Store().GetUser(ctx, payload.Msg.UserID)
 		if err != nil {
@@ -171,7 +176,7 @@ func (s *Server) handleSend(ctx context.Context, r *http.Request, w http.Respons
 		}
 	}
 
-	err = s.service.QueueMsgOut(ctx, ch, models.NewMsgOut(payload.Msg.ID, ch, payload.ChatID, payload.Msg.Text, payload.Msg.Attachments, payload.Msg.Origin, user, time.Now()))
+	err = s.service.QueueMsgOut(ctx, ch, contact, models.NewMsgOut(payload.Msg.ID, payload.Msg.Text, payload.Msg.Attachments, payload.Msg.Origin, user, time.Now()))
 	if err == nil {
 		w.Write(jsonx.MustMarshal(map[string]any{"status": "queued"}))
 	} else {

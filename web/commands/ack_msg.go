@@ -3,12 +3,12 @@ package commands
 import "github.com/nyaruka/chip/core/models"
 
 func init() {
-	registerType(TypeAckMsg, func() Command { return &AckMsg{} })
+	registerType(TypeAckChat, func() Command { return &AckChat{} })
 }
 
-const TypeAckMsg string = "ack_msg"
+const TypeAckChat string = "ack_chat"
 
-type AckMsg struct {
+type AckChat struct {
 	baseCommand
 
 	MsgID models.MsgID `json:"msg_id" validate:"required"`

@@ -22,33 +22,34 @@ const (
 	MsgOriginTicket    MsgOrigin = "ticket"
 	MsgOriginChat      MsgOrigin = "chat"
 
-	MsgStatusSent MsgStatus = "sent"
-
 	DirectionIn  MsgDirection = "I"
 	DirectionOut MsgDirection = "O"
 )
 
+type MsgIn struct {
+	ID   MsgID     `json:"id"`
+	Text string    `json:"text"`
+	Time time.Time `json:"time"`
+}
+
+func NewMsgIn(id MsgID, text string, t time.Time) *MsgIn {
+	return &MsgIn{ID: id, Text: text, Time: t}
+}
+
 type MsgOut struct {
-	ID          MsgID       `json:"id"`
-	ChannelUUID ChannelUUID `json:"channel_uuid"`
-	ChatID      ChatID      `json:"chat_id"`
-	Text        string      `json:"text"`
-	Attachments []string    `json:"attachments,omitempty"`
-	Origin      MsgOrigin   `json:"origin"`
-	UserID      UserID      `json:"user_id,omitempty"`
-	Time        time.Time   `json:"time"`
+	ID          MsgID     `json:"id"`
+	Text        string    `json:"text"`
+	Attachments []string  `json:"attachments,omitempty"`
+	Origin      MsgOrigin `json:"origin"`
+	User        *User     `json:"user,omitempty"`
+	Time        time.Time `json:"time"`
 }
 
-func NewMsgOut(id MsgID, ch *Channel, chatID ChatID, text string, attachments []string, origin MsgOrigin, u *User, t time.Time) *MsgOut {
-	var userID UserID
-	if u != nil {
-		userID = u.ID
-	}
-
-	return &MsgOut{ID: id, ChannelUUID: ch.UUID, ChatID: chatID, Text: text, Origin: origin, UserID: userID, Time: t}
+func NewMsgOut(id MsgID, text string, attachments []string, origin MsgOrigin, user *User, t time.Time) *MsgOut {
+	return &MsgOut{ID: id, Text: text, Attachments: attachments, Origin: origin, User: user, Time: t}
 }
 
-type Msg struct {
+type DBMsg struct {
 	ID          MsgID        `json:"id"`
 	Text        string       `json:"text"`
 	Attachments []string     `json:"attachments"`
@@ -60,7 +61,32 @@ type Msg struct {
 	CreatedOn   time.Time    `json:"created_on"`
 }
 
-func (m *Msg) Origin() MsgOrigin {
+func (m *DBMsg) ToMsgIn() *MsgIn {
+	if m.Direction != DirectionIn {
+		panic("can only be called on an inbound message")
+	}
+
+	return NewMsgIn(m.ID, m.Text, m.CreatedOn)
+}
+
+func (m *DBMsg) ToMsgOut(ctx context.Context, store Store) (*MsgOut, error) {
+	if m.Direction != DirectionOut {
+		panic("can only be called on an outbound message")
+	}
+
+	var user *User
+	var err error
+	if m.CreatedByID != NilUserID {
+		user, err = store.GetUser(ctx, m.CreatedByID)
+		if err != nil {
+			return nil, fmt.Errorf("error fetching user: %w", err)
+		}
+	}
+
+	return NewMsgOut(m.ID, m.Text, m.Attachments, m.origin(), user, m.CreatedOn), nil
+}
+
+func (m *DBMsg) origin() MsgOrigin {
 	if m.FlowID != NilFlowID {
 		return MsgOriginFlow
 	} else if m.BroadcastID != NilBroadcastID {
@@ -80,17 +106,17 @@ SELECT row_to_json(r) FROM (
      LIMIT $3
 ) r`
 
-func LoadContactMessages(ctx context.Context, rt *runtime.Runtime, contactID ContactID, before time.Time, limit int) ([]*Msg, error) {
+func LoadContactMessages(ctx context.Context, rt *runtime.Runtime, contactID ContactID, before time.Time, limit int) ([]*DBMsg, error) {
 	rows, err := rt.DB.QueryContext(ctx, sqlSelectContactMessages, contactID, before, limit)
 	if err != nil {
 		return nil, fmt.Errorf("error querying contact messages: %w", err)
 	}
 	defer rows.Close()
 
-	msgs := make([]*Msg, 0)
+	msgs := make([]*DBMsg, 0)
 
 	for rows.Next() {
-		msg := &Msg{}
+		msg := &DBMsg{}
 		if err := dbutil.ScanJSON(rows, msg); err != nil {
 			return nil, fmt.Errorf("error scanning msg row: %w", err)
 		}

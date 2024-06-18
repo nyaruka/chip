@@ -52,13 +52,13 @@ Creates a new incoming message from the client:
 }
 ```
 
-### `ack_msg`
+### `ack_chat`
 
-Acknowledges receipt an outgoing message to the client:
+Acknowledges receipt an outgoing chat message to the client:
 
 ```json
 {
-    "type": "ack_msg",
+    "type": "ack_chat",
     "msg_id": 46363452
 }
 ```
@@ -96,7 +96,6 @@ A chat session for a new contact has been successfully started:
 ```json
 {
     "type": "chat_started",
-    "time": "2024-05-01T17:15:30.123456Z",
     "chat_id": "65vbbDAQCdPdEWlEhDGy4utO"
 }
 ```
@@ -108,34 +107,37 @@ A chat session for an existing contact has been successfully resumed:
 ```json
 {
     "type": "chat_resumed",
-    "time": "2024-05-01T17:15:30.123456Z",
     "chat_id": "65vbbDAQCdPdEWlEhDGy4utO",
     "email": "bob@nyaruka.com"
 }
 ```
 
-### `msg_out`
+### `chat_out`
 
-A new outgoing message has been created and should be displayed in the client:
+A new outgoing chat event has been created and should be displayed. Thus far `msg_out` is the only type sent.
 
 ```json
 {
-    "type": "msg_out",
-    "time": "2024-05-01T17:15:30.123456Z",
-    "msg_id": 34634,
-    "text": "Thanks for contacting us!",
-    "origin": "flow"
+    "type": "chat_out",
+    "msg_out": {
+        "id": 34634,
+        "text": "Thanks for contacting us!",
+        "origin": "flow",
+        "time": "2024-05-01T17:15:30.123456Z"
+    }
 }
 ```
 
 ```json
 {
-    "type": "msg_out",
-    "time": "2024-05-01T17:15:30.123456Z",
-    "msg_id": 34634,
-    "text": "How can we help?",
-    "origin": "chat",
-    "user": {"name": "Bob McTickets", "email": "bob@nyaruka.com"}
+    "type": "chat_out",
+    "msg_out": {
+        "id": 34634,
+        "text": "Thanks for contacting us!",
+        "origin": "chat",
+        "user": {"id": 234, "name": "Bob McTickets", "email": "bob@nyaruka.com", "avatar": "https://example.com/bob.jpg"},
+        "time": "2024-05-01T17:15:30.123456Z"
+    }
 }
 ```
 
@@ -146,20 +148,22 @@ The client previously requested history with a `get_history` command:
 ```json
 {
     "type": "history",
-    "time": "2024-05-01T17:15:30.123456Z",
     "history": [
-        {
-            "type": "msg_in",
-            "time": "2024-04-01T13:15:30.123456Z",
-            "msg_id": 34632,
-            "text": "I need help!"
+        { 
+            "msg_in": {
+                "id": 34632,
+                "text": "I need help!",
+                "time": "2024-04-01T13:15:30.123456Z"
+            }
         },
         {
-            "type": "msg_out",
-            "time": "2024-04-01T13:15:30.123456Z",
-            "msg_id": 34634,
-            "text": "Thanks for contacting us!",
-            "origin": "flow"
+            "msg_out": {
+                "id": 34634,
+                "text": "Thanks for contacting us!",
+                "origin": "chat",
+                "user": {"id": 234, "name": "Bob McTickets", "email": "bob@nyaruka.com", "avatar": "https://example.com/bob.jpg"},
+                "time": "2024-04-01T13:15:30.123456Z"
+            }
         }
     ]
 }
