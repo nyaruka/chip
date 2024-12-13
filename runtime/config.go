@@ -20,6 +20,9 @@ type Config struct {
 	StorageURL string `validate:"url"                                help:"URL base for public storage, e.g. avatars"`
 	SentryDSN  string `                                              help:"the DSN used for logging errors to Sentry"`
 
+	CloudwatchNamespace string `help:"the namespace to use for cloudwatch metrics"`
+	DeploymentID        string `help:"the deployment identifier to use for metrics"`
+
 	InstanceID string     `help:"the unique identifier of this instance, defaults to hostname"`
 	LogLevel   slog.Level `help:"the logging level to use"`
 	Version    string     `help:"the version of this install"`
@@ -37,6 +40,9 @@ func NewDefaultConfig() *Config {
 		DB:         "postgres://temba:temba@localhost/temba?sslmode=disable&Timezone=UTC",
 		Redis:      "redis://localhost:6379/5",
 		StorageURL: "http://localhost/media/",
+
+		CloudwatchNamespace: "Temba",
+		DeploymentID:        "dev",
 
 		InstanceID: hostname,
 		LogLevel:   slog.LevelInfo,
