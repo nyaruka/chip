@@ -30,7 +30,7 @@ type Client struct {
 
 func NewClient(s *Server, sock httpx.WebSocket, channel *models.Channel) *Client {
 	c := &Client{
-		id:      string(uuids.New()),
+		id:      string(uuids.NewV4()),
 		server:  s,
 		socket:  sock,
 		channel: channel,
