@@ -20,6 +20,10 @@ type Config struct {
 	StorageURL string `validate:"url"                                help:"URL base for public storage, e.g. avatars"`
 	SentryDSN  string `                                              help:"the DSN used for logging errors to Sentry"`
 
+	AWSAccessKeyID     string `help:"access key ID to use for AWS services"`
+	AWSSecretAccessKey string `help:"secret access key to use for AWS services"`
+	AWSRegion          string `help:"region to use for AWS services, e.g. us-east-1"`
+
 	CloudwatchNamespace string `help:"the namespace to use for cloudwatch metrics"`
 	DeploymentID        string `help:"the deployment identifier to use for metrics"`
 
@@ -40,6 +44,10 @@ func NewDefaultConfig() *Config {
 		DB:         "postgres://temba:temba@localhost/temba?sslmode=disable&Timezone=UTC",
 		Redis:      "redis://localhost:6379/5",
 		StorageURL: "http://localhost/media/",
+
+		AWSAccessKeyID:     "",
+		AWSSecretAccessKey: "",
+		AWSRegion:          "us-east-1",
 
 		CloudwatchNamespace: "Temba",
 		DeploymentID:        "dev",
