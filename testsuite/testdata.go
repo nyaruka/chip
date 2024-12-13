@@ -31,7 +31,7 @@ func InsertChannel(rt *runtime.Runtime, uuid models.ChannelUUID, orgID models.Or
 func InsertContact(rt *runtime.Runtime, orgID models.OrgID, name string) models.ContactID {
 	row := rt.DB.QueryRow(
 		`INSERT INTO contacts_contact(uuid, org_id, name, status, ticket_count, is_active, created_on, modified_on) 
-		VALUES($1, $2, $3, 'A', 1, TRUE, NOW(), NOW()) RETURNING id`, uuids.New(), orgID, name,
+		VALUES($1, $2, $3, 'A', 1, TRUE, NOW(), NOW()) RETURNING id`, uuids.NewV4(), orgID, name,
 	)
 	var id models.ContactID
 	must(row.Scan(&id))
@@ -41,7 +41,7 @@ func InsertContact(rt *runtime.Runtime, orgID models.OrgID, name string) models.
 func InsertIncomingMsg(rt *runtime.Runtime, orgID models.OrgID, channelID models.ChannelID, contactID models.ContactID, urnID models.URNID, text string, createdOn time.Time) models.MsgID {
 	row := rt.DB.QueryRow(
 		`INSERT INTO msgs_msg(uuid, org_id, channel_id, contact_id, contact_urn_id, direction, msg_type, status, visibility, text, created_on, modified_on, next_attempt, msg_count, error_count)
-	  	 VALUES($1, $2, $3, $4, $5, 'I', 'T', 'H', 'V', $6, $7, NOW(), NOW(), 1, 1) RETURNING id`, uuids.New(), orgID, channelID, contactID, urnID, text, createdOn,
+	  	 VALUES($1, $2, $3, $4, $5, 'I', 'T', 'H', 'V', $6, $7, NOW(), NOW(), 1, 1) RETURNING id`, uuids.NewV4(), orgID, channelID, contactID, urnID, text, createdOn,
 	)
 	var id models.MsgID
 	must(row.Scan(&id))
@@ -51,7 +51,7 @@ func InsertIncomingMsg(rt *runtime.Runtime, orgID models.OrgID, channelID models
 func InsertOutgoingMsg(rt *runtime.Runtime, orgID models.OrgID, channelID models.ChannelID, contactID models.ContactID, urnID models.URNID, text string, createdOn time.Time) models.MsgID {
 	row := rt.DB.QueryRow(
 		`INSERT INTO msgs_msg(uuid, org_id, channel_id, contact_id, contact_urn_id, direction, msg_type, status, visibility, text, created_on, modified_on, next_attempt, msg_count, error_count)
-	  	 VALUES($1, $2, $3, $4, $5, 'O', 'T', 'Q', 'V', $6, $7, NOW(), NOW(), 1, 1) RETURNING id`, uuids.New(), orgID, channelID, contactID, urnID, text, createdOn,
+	  	 VALUES($1, $2, $3, $4, $5, 'O', 'T', 'Q', 'V', $6, $7, NOW(), NOW(), 1, 1) RETURNING id`, uuids.NewV4(), orgID, channelID, contactID, urnID, text, createdOn,
 	)
 	var id models.MsgID
 	must(row.Scan(&id))

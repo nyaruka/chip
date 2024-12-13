@@ -24,8 +24,8 @@ func TestServer(t *testing.T) {
 	defer random.SetGenerator(random.DefaultGenerator)
 	random.SetGenerator(random.NewSeededGenerator(1234))
 
-	defer dates.SetNowSource(dates.DefaultNowSource)
-	dates.SetNowSource(dates.NewSequentialNowSource(time.Date(2024, 5, 2, 16, 5, 4, 0, time.UTC)))
+	dates.SetNowFunc(dates.NewSequentialNow(time.Date(2024, 5, 2, 16, 5, 4, 0, time.UTC), time.Second))
+	defer dates.SetNowFunc(time.Now)
 
 	mockCourier := testsuite.NewMockCourier(rt)
 
