@@ -168,3 +168,4 @@ The client previously requested history with a `get_history` command:
     ]
 }
 ```
+
