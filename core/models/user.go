@@ -23,10 +23,9 @@ type User struct {
 
 const sqlSelectUser = `
 SELECT row_to_json(r) FROM (
-	SELECT u.id, u.email, TRIM(CONCAT(u.first_name, ' ', u.last_name)) AS name, s.avatar
-	FROM auth_user u
-	INNER JOIN orgs_usersettings s ON s.user_id = u.id
-	WHERE u.id = $1 AND u.is_active
+    SELECT id, email, TRIM(CONCAT(first_name, ' ', last_name)) AS name, avatar
+    FROM users_user 
+    WHERE id = $1 AND is_active
 ) r`
 
 func LoadUser(ctx context.Context, rt *runtime.Runtime, id UserID) (*User, error) {
