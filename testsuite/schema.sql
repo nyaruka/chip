@@ -54,20 +54,14 @@ CREATE TABLE contacts_contacturn (
     UNIQUE (org_id, identity)
 );
 
-DROP TABLE IF EXISTS auth_user CASCADE;
-CREATE TABLE auth_user (
+DROP TABLE IF EXISTS users_user CASCADE;
+CREATE TABLE users_user (
     id serial primary key,
     email character varying(254) NOT NULL,
     first_name character varying(150),
     last_name character varying(150),
     is_active boolean NOT NULL,
-    is_staff boolean NOT NULL
-);
-
-DROP TABLE IF EXISTS orgs_usersettings CASCADE;
-CREATE TABLE orgs_usersettings (
-    id serial primary key,
-    user_id integer NOT NULL REFERENCES auth_user(id) ON DELETE CASCADE,
+    is_staff boolean NOT NULL,
     avatar character varying(100) NULL
 );
 
@@ -94,7 +88,7 @@ CREATE TABLE msgs_msg (
     broadcast_id integer REFERENCES msgs_broadcast(id) ON DELETE CASCADE,
     flow_id integer REFERENCES flows_flow(id) ON DELETE CASCADE,
     ticket_id integer REFERENCES tickets_ticket(id) ON DELETE CASCADE,
-    created_by_id integer REFERENCES auth_user(id) ON DELETE CASCADE,
+    created_by_id integer REFERENCES users_user(id) ON DELETE CASCADE,
     text text NOT NULL,
     attachments character varying(255)[] NULL,
     quick_replies character varying(64)[] NULL,
