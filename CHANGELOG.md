@@ -1,3 +1,10 @@
+v0.2.0 (2025-02-12)
+-------------------------
+ * Update to use new users_user table
+ * Update to go 1.23 and latest deps
+ * Add cloudwatch config variables
+ * Add small delay to server test
+
 v0.1.0 (2024-06-18)
 -------------------------
  * Update deps
