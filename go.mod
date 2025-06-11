@@ -1,6 +1,6 @@
 module github.com/nyaruka/chip
 
-go 1.23
+go 1.24
 
 require (
 	github.com/getsentry/sentry-go v0.30.0
