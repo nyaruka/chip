@@ -19,7 +19,7 @@ func NewMockCourier(rt *runtime.Runtime) *MockCourier {
 	return &MockCourier{rt: rt}
 }
 
-func (c *MockCourier) StartChat(ch *models.Channel, chatID models.ChatID) error {
+func (c *MockCourier) StartChat(ctx context.Context, ch *models.Channel, chatID models.ChatID) error {
 	c.Calls = append(c.Calls, fmt.Sprintf("StartChat(%s, %s)", ch.UUID, chatID))
 
 	cid := InsertContact(c.rt, ch.OrgID, "")
@@ -28,7 +28,7 @@ func (c *MockCourier) StartChat(ch *models.Channel, chatID models.ChatID) error 
 	return nil
 }
 
-func (c *MockCourier) CreateMsg(ch *models.Channel, contact *models.Contact, text string) error {
+func (c *MockCourier) CreateMsg(ctx context.Context, ch *models.Channel, contact *models.Contact, text string) error {
 	c.Calls = append(c.Calls, fmt.Sprintf("CreateMsg(%s, %d, '%s')", ch.UUID, contact.ID, text))
 
 	InsertIncomingMsg(c.rt, ch.OrgID, ch.ID, contact.ID, contact.URNID, text, dates.Now())
@@ -36,7 +36,7 @@ func (c *MockCourier) CreateMsg(ch *models.Channel, contact *models.Contact, tex
 	return nil
 }
 
-func (c *MockCourier) ReportDelivered(ch *models.Channel, contact *models.Contact, msgID models.MsgID) error {
+func (c *MockCourier) ReportDelivered(ctx context.Context, ch *models.Channel, contact *models.Contact, msgID models.MsgID) error {
 	c.Calls = append(c.Calls, fmt.Sprintf("ReportDelivered(%s, %d, %d)", ch.UUID, contact.ID, msgID))
 
 	_, err := c.rt.DB.ExecContext(context.Background(), `UPDATE msgs_msg SET status = 'D', modified_on = NOW() WHERE id = $1 AND channel_id = $2`, msgID, ch.ID)

@@ -92,7 +92,7 @@ func (s *Service) StartChat(ctx context.Context, ch *models.Channel, chatID mode
 		chatID = models.NewChatID()
 		isNew = true
 
-		if err := s.courier.StartChat(ch, chatID); err != nil {
+		if err := s.courier.StartChat(ctx, ch, chatID); err != nil {
 			return nil, false, fmt.Errorf("error notifying courier of new chat: %w", err)
 		}
 
@@ -113,7 +113,7 @@ func (s *Service) StartChat(ctx context.Context, ch *models.Channel, chatID mode
 }
 
 func (s *Service) CreateMsgIn(ctx context.Context, ch *models.Channel, contact *models.Contact, text string) error {
-	if err := s.courier.CreateMsg(ch, contact, text); err != nil {
+	if err := s.courier.CreateMsg(ctx, ch, contact, text); err != nil {
 		return fmt.Errorf("error notifying courier of new msg: %w", err)
 	}
 	return nil
@@ -130,7 +130,7 @@ func (s *Service) ConfirmDelivery(ctx context.Context, ch *models.Channel, conta
 			return fmt.Errorf("error parsing msg id: %w", err)
 		}
 
-		if err := s.courier.ReportDelivered(ch, contact, models.MsgID(msgID)); err != nil {
+		if err := s.courier.ReportDelivered(ctx, ch, contact, models.MsgID(msgID)); err != nil {
 			return fmt.Errorf("error notifying courier of delivery: %w", err)
 		}
 	}

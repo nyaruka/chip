@@ -17,7 +17,7 @@ import (
 	"github.com/nyaruka/chip/runtime"
 	"github.com/nyaruka/redisx"
 	slogmulti "github.com/samber/slog-multi"
-	slogsentry "github.com/samber/slog-sentry"
+	slogsentry "github.com/samber/slog-sentry/v2"
 )
 
 var (

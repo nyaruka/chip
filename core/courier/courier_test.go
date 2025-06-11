@@ -49,22 +49,22 @@ func TestCourier(t *testing.T) {
 	bob, err := models.LoadContact(ctx, rt, orgID, "65vbbDAQCdPdEWlEhDGy4utO")
 	require.NoError(t, err)
 
-	err = c.StartChat(channel, "65vbbDAQCdPdEWlEhDGy4utO")
+	err = c.StartChat(ctx, channel, "65vbbDAQCdPdEWlEhDGy4utO")
 	assert.NoError(t, err)
 	assert.Equal(t, "POST", mocks.Requests()[0].Method)
 	assert.Equal(t, `{"chat_id":"65vbbDAQCdPdEWlEhDGy4utO","secret":"sesame","events":[{"type":"chat_started"}]}`, getBody(mocks.Requests()[0]))
 
-	err = c.CreateMsg(channel, bob, "hello")
+	err = c.CreateMsg(ctx, channel, bob, "hello")
 	assert.NoError(t, err)
 	assert.Equal(t, "POST", mocks.Requests()[1].Method)
 	assert.Equal(t, `{"chat_id":"65vbbDAQCdPdEWlEhDGy4utO","secret":"sesame","events":[{"type":"msg_in","msg":{"text":"hello"}}]}`, getBody(mocks.Requests()[1]))
 
-	err = c.ReportDelivered(channel, bob, 1)
+	err = c.ReportDelivered(ctx, channel, bob, 1)
 	assert.NoError(t, err)
 	assert.Equal(t, "POST", mocks.Requests()[2].Method)
 	assert.Equal(t, `{"chat_id":"65vbbDAQCdPdEWlEhDGy4utO","secret":"sesame","events":[{"type":"msg_status","status":{"msg_id":1,"status":"delivered"}}]}`, getBody(mocks.Requests()[2]))
 
-	err = c.StartChat(channel, "65vbbDAQCdPdEWlEhDGy4utO")
+	err = c.StartChat(ctx, channel, "65vbbDAQCdPdEWlEhDGy4utO")
 	assert.EqualError(t, err, "courier returned non-2XX status")
 
 	assert.False(t, mocks.HasUnused())

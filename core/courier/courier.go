@@ -2,6 +2,7 @@ package courier
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -15,9 +16,9 @@ import (
 
 // Courier is the interface for interacting with a courier instance or a mock
 type Courier interface {
-	StartChat(*models.Channel, models.ChatID) error
-	CreateMsg(*models.Channel, *models.Contact, string) error
-	ReportDelivered(*models.Channel, *models.Contact, models.MsgID) error
+	StartChat(context.Context, *models.Channel, models.ChatID) error
+	CreateMsg(context.Context, *models.Channel, *models.Contact, string) error
+	ReportDelivered(context.Context, *models.Channel, *models.Contact, models.MsgID) error
 }
 
 type courier struct {
@@ -35,14 +36,14 @@ type payload struct {
 	Events []Event       `json:"events"`
 }
 
-func (c *courier) request(ch *models.Channel, payload *payload) error {
+func (c *courier) request(ctx context.Context, ch *models.Channel, payload *payload) error {
 	proto := "http"
 	if c.cfg.SSL {
 		proto += "s"
 	}
 	url := fmt.Sprintf("%s://%s/c/chp/%s/receive", proto, c.cfg.Domain, ch.UUID)
 	body := jsonx.MustMarshal(payload)
-	request, _ := httpx.NewRequest("POST", url, bytes.NewReader(body), map[string]string{"Content-Type": "application/json"})
+	request, _ := httpx.NewRequest(ctx, "POST", url, bytes.NewReader(body), map[string]string{"Content-Type": "application/json"})
 
 	resp, err := httpx.Do(http.DefaultClient, request, nil, nil)
 	if err != nil {
@@ -55,24 +56,24 @@ func (c *courier) request(ch *models.Channel, payload *payload) error {
 	return nil
 }
 
-func (c *courier) StartChat(ch *models.Channel, chatID models.ChatID) error {
-	return c.request(ch, &payload{
+func (c *courier) StartChat(ctx context.Context, ch *models.Channel, chatID models.ChatID) error {
+	return c.request(ctx, ch, &payload{
 		ChatID: chatID,
 		Secret: ch.Secret(),
 		Events: []Event{newChatStartedEvent()},
 	})
 }
 
-func (c *courier) CreateMsg(ch *models.Channel, contact *models.Contact, text string) error {
-	return c.request(ch, &payload{
+func (c *courier) CreateMsg(ctx context.Context, ch *models.Channel, contact *models.Contact, text string) error {
+	return c.request(ctx, ch, &payload{
 		ChatID: contact.ChatID,
 		Secret: ch.Secret(),
 		Events: []Event{newMsgInEvent(text)},
 	})
 }
 
-func (c *courier) ReportDelivered(ch *models.Channel, contact *models.Contact, msgID models.MsgID) error {
-	return c.request(ch, &payload{
+func (c *courier) ReportDelivered(ctx context.Context, ch *models.Channel, contact *models.Contact, msgID models.MsgID) error {
+	return c.request(ctx, ch, &payload{
 		ChatID: contact.ChatID,
 		Secret: ch.Secret(),
 		Events: []Event{newMsgStatusEvent(msgID, MsgStatusDelivered)},
