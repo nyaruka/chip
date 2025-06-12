@@ -15,7 +15,7 @@ import (
 	"github.com/nyaruka/chip"
 	"github.com/nyaruka/chip/core/courier"
 	"github.com/nyaruka/chip/runtime"
-	"github.com/nyaruka/redisx"
+	"github.com/nyaruka/vkutil"
 	slogmulti "github.com/samber/slog-multi"
 	slogsentry "github.com/samber/slog-sentry/v2"
 )
@@ -74,7 +74,7 @@ func newService(cfg *runtime.Config, log *slog.Logger) (*chip.Service, error) {
 		log.Info("db ok")
 	}
 
-	rt.RP, err = redisx.NewPool(rt.Config.Redis)
+	rt.RP, err = vkutil.NewPool(rt.Config.Redis)
 	if err != nil {
 		return nil, fmt.Errorf("error connecting to redis: %w", err)
 	} else {

@@ -19,7 +19,7 @@ func TestServer(t *testing.T) {
 	ctx, rt := testsuite.Runtime()
 
 	defer testsuite.ResetDB()
-	defer testsuite.ResetRedis()
+	defer testsuite.ResetValkey()
 
 	defer random.SetGenerator(random.DefaultGenerator)
 	random.SetGenerator(random.NewSeededGenerator(1234))
