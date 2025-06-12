@@ -9,7 +9,7 @@ import (
 
 	"github.com/gomodule/redigo/redis"
 	"github.com/nyaruka/chip/runtime"
-	"github.com/nyaruka/redisx/assertredis"
+	"github.com/nyaruka/vkutil/assertvk"
 )
 
 const (
@@ -64,14 +64,14 @@ func ResetDB() {
 	noError(err)
 }
 
-// resets our redis database
-func ResetRedis() {
-	assertredis.FlushDB()
+// resets our valkey database
+func ResetValkey() {
+	assertvk.FlushDB()
 }
 
 // returns a redis pool to our test database
 func getRP() *redis.Pool {
-	return assertredis.TestDB()
+	return assertvk.TestDB()
 }
 
 // Converts a project root relative path to an absolute path usable in any test. This is needed because go tests

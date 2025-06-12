@@ -12,7 +12,7 @@ require (
 	github.com/nyaruka/ezconf v0.3.0
 	github.com/nyaruka/gocommon v1.64.1
 	github.com/nyaruka/null/v2 v2.0.3
-	github.com/nyaruka/redisx v0.11.0
+	github.com/nyaruka/vkutil v0.12.0
 	github.com/samber/slog-multi v1.4.0
 	github.com/samber/slog-sentry/v2 v2.9.3
 	github.com/stretchr/testify v1.10.0
