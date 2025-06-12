@@ -76,7 +76,8 @@ func newService(cfg *runtime.Config, log *slog.Logger) (*chip.Service, error) {
 
 	rt.RP, err = vkutil.NewPool(rt.Config.Redis)
 	if err != nil {
-		return nil, fmt.Errorf("error connecting to redis: %w", err)
+		log.Warn("error connecting to redis, continuing without redis", "error", err)
+		rt.RP = nil
 	} else {
 		log.Info("redis ok")
 	}

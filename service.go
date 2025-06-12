@@ -10,6 +10,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/gomodule/redigo/redis"
 	"github.com/nyaruka/chip/core/courier"
 	"github.com/nyaruka/chip/core/models"
 	"github.com/nyaruka/chip/core/queue"
@@ -72,8 +73,6 @@ func (s *Service) Store() models.Store { return s.store }
 
 func (s *Service) StartChat(ctx context.Context, ch *models.Channel, chatID models.ChatID) (*models.Contact, bool, error) {
 	log := slog.With("comp", "service")
-	rc := s.rt.RP.Get()
-	defer rc.Close()
 
 	var contact *models.Contact
 	var isNew bool
@@ -103,10 +102,10 @@ func (s *Service) StartChat(ctx context.Context, ch *models.Channel, chatID mode
 		}
 	}
 
-	// mark chat as ready to send messages
-	if err := s.outboxes.SetReady(rc, ch, chatID, true); err != nil {
-		return nil, false, fmt.Errorf("error setting chat ready: %w", err)
-	}
+	// mark chat as ready to send messages (non-fatal if Redis is unavailable)
+	s.rt.WithRedisConn(func(rc redis.Conn) error {
+		return s.outboxes.SetReady(rc, ch, chatID, true)
+	})
 
 	log.Info("chat started", "chat_id", chatID)
 	return contact, isNew, nil
@@ -120,9 +119,6 @@ func (s *Service) CreateMsgIn(ctx context.Context, ch *models.Channel, contact *
 }
 
 func (s *Service) ConfirmDelivery(ctx context.Context, ch *models.Channel, contact *models.Contact, itemID queue.ItemID) error {
-	rc := s.rt.RP.Get()
-	defer rc.Close()
-
 	// if this is a message, tell courier it was delivered
 	if strings.HasPrefix(string(itemID), "m") {
 		msgID, err := strconv.Atoi(strings.TrimPrefix(string(itemID), "m"))
@@ -135,34 +131,32 @@ func (s *Service) ConfirmDelivery(ctx context.Context, ch *models.Channel, conta
 		}
 	}
 
-	if _, err := s.outboxes.RecordSent(rc, ch, contact.ChatID, itemID); err != nil {
-		return fmt.Errorf("error setting chat ready: %w", err)
-	}
+	// record sent status in Redis (non-fatal if Redis is unavailable)
+	s.rt.WithRedisConn(func(rc redis.Conn) error {
+		_, err := s.outboxes.RecordSent(rc, ch, contact.ChatID, itemID)
+		return err
+	})
 
 	return nil
 }
 
 func (s *Service) CloseChat(ctx context.Context, ch *models.Channel, contact *models.Contact) error {
 	log := slog.With("comp", "service")
-	rc := s.rt.RP.Get()
-	defer rc.Close()
 
-	// mark chat as no longer ready
-	if err := s.outboxes.SetReady(rc, ch, contact.ChatID, false); err != nil {
-		return fmt.Errorf("error unsetting chat ready: %w", err)
-	}
+	// mark chat as no longer ready (non-fatal if Redis is unavailable)
+	s.rt.WithRedisConn(func(rc redis.Conn) error {
+		return s.outboxes.SetReady(rc, ch, contact.ChatID, false)
+	})
 
 	log.Info("chat closed", "chat_id", contact.ChatID)
 	return nil
 }
 
 func (s *Service) QueueMsgOut(ctx context.Context, ch *models.Channel, contact *models.Contact, msg *models.MsgOut) error {
-	rc := s.rt.RP.Get()
-	defer rc.Close()
-
-	if err := s.outboxes.AddMessage(rc, ch, contact.ChatID, msg); err != nil {
-		return fmt.Errorf("error queuing to outbox: %w", err)
-	}
+	// queue message to outbox (non-fatal if Redis is unavailable)
+	s.rt.WithRedisConn(func(rc redis.Conn) error {
+		return s.outboxes.AddMessage(rc, ch, contact.ChatID, msg)
+	})
 
 	return nil
 }
@@ -185,6 +179,11 @@ func (s *Service) sender() {
 
 func (s *Service) send() {
 	log := slog.With("comp", "service")
+
+	if s.rt.RP == nil {
+		// Redis unavailable, skip sending
+		return
+	}
 
 	rc := s.rt.RP.Get()
 	defer rc.Close()

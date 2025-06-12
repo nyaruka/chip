@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"log/slog"
 	"time"
 
 	"github.com/gomodule/redigo/redis"
@@ -32,4 +33,22 @@ func OpenDBPool(url string, maxOpenConns int) (*sql.DB, error) {
 	cancel()
 
 	return db, err
+}
+
+// WithRedisConn executes a function with a Redis connection, handling Redis unavailability gracefully
+func (rt *Runtime) WithRedisConn(fn func(redis.Conn) error) error {
+	if rt.RP == nil {
+		slog.Debug("redis unavailable, skipping operation")
+		return nil
+	}
+
+	rc := rt.RP.Get()
+	defer rc.Close()
+
+	if err := fn(rc); err != nil {
+		slog.Warn("redis operation failed", "error", err)
+		return nil // don't propagate Redis errors as fatal
+	}
+
+	return nil
 }
