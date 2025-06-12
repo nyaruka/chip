@@ -1,3 +1,8 @@
+v0.3.0 (2025-06-12)
+-------------------------
+ * Update dependencies
+ * Update to go 1.24
+
 v0.2.0 (2025-02-12)
 -------------------------
  * Update to use new users_user table
