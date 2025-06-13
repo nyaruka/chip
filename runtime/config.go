@@ -16,7 +16,7 @@ type Config struct {
 	SSL     bool   `help:"whether server is using SSL"`
 
 	DB         string `validate:"url,startswith=postgres:"           help:"URL for your Postgres database"`
-	Redis      string `validate:"url,startswith=redis:"              help:"URL for your Redis instance"`
+	Valkey     string `validate:"url,startswith=valkey:"             help:"URL for your Valkey instance"`
 	StorageURL string `validate:"url"                                help:"URL base for public storage, e.g. avatars"`
 	SentryDSN  string `                                              help:"the DSN used for logging errors to Sentry"`
 
@@ -42,7 +42,7 @@ func NewDefaultConfig() *Config {
 		SSL:     false,
 
 		DB:         "postgres://temba:temba@localhost/temba?sslmode=disable&Timezone=UTC",
-		Redis:      "redis://localhost:6379/5",
+		Valkey:     "valkey://localhost:6379/5",
 		StorageURL: "http://localhost/media/",
 
 		AWSAccessKeyID:     "",
