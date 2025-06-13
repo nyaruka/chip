@@ -74,11 +74,11 @@ func newService(cfg *runtime.Config, log *slog.Logger) (*chip.Service, error) {
 		log.Info("db ok")
 	}
 
-	rt.RP, err = vkutil.NewPool(rt.Config.Redis)
+	rt.RP, err = vkutil.NewPool(rt.Config.Valkey)
 	if err != nil {
-		return nil, fmt.Errorf("error connecting to redis: %w", err)
+		return nil, fmt.Errorf("error connecting to valkey: %w", err)
 	} else {
-		log.Info("redis ok")
+		log.Info("valkey ok")
 	}
 
 	svc := chip.NewService(rt, courier.NewCourier(rt.Config))
