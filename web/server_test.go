@@ -11,6 +11,7 @@ import (
 	"github.com/nyaruka/gocommon/dates"
 	"github.com/nyaruka/gocommon/httpx"
 	"github.com/nyaruka/gocommon/random"
+	"github.com/nyaruka/gocommon/uuids"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -20,6 +21,9 @@ func TestServer(t *testing.T) {
 
 	defer testsuite.ResetDB()
 	defer testsuite.ResetValkey()
+
+	uuids.SetGenerator(uuids.NewSeededGenerator(12345, time.Now))
+	defer uuids.SetGenerator(uuids.DefaultGenerator)
 
 	defer random.SetGenerator(random.DefaultGenerator)
 	random.SetGenerator(random.NewSeededGenerator(1234))
@@ -94,21 +98,21 @@ func TestServer(t *testing.T) {
 	assert.JSONEq(t, `{
 		"type": "history",
 		"history": [
-			{"msg_in": {"id":1, "text": "hello", "time": "2024-05-02T16:05:10Z"}}
+			{"msg_in": {"uuid":"59d74b86-3e2f-4a93-aece-b05d2fdcde0c", "text": "hello", "time": "2024-05-02T16:05:10Z"}}
 		]
 	}`, client.Read(t))
 
 	// queue a message to be sent to the client
-	err = svc.QueueMsgOut(ctx, ch, contact, models.NewMsgOut(123, "welcome", nil, models.MsgOriginBroadcast, nil, dates.Now()))
+	err = svc.QueueMsgOut(ctx, ch, contact, models.NewMsgOut("0191e180-7d60-7000-aded-7d8b151cbd5b", "welcome", nil, models.MsgOriginBroadcast, nil, dates.Now()))
 	assert.NoError(t, err)
 
 	// and check it is sent to the client
-	assert.JSONEq(t, `{"type": "chat_out", "msg_out": {"id": 123, "text": "welcome", "origin": "broadcast", "time": "2024-05-02T16:05:11Z"}}`, client.Read(t))
+	assert.JSONEq(t, `{"type": "chat_out", "msg_out": {"uuid": "0191e180-7d60-7000-aded-7d8b151cbd5b", "text": "welcome", "origin": "broadcast", "time": "2024-05-02T16:05:11Z"}}`, client.Read(t))
 
 	// client acknowledges receipt of the message
-	client.Send(t, `{"type": "ack_chat", "msg_id": 123}`)
+	client.Send(t, `{"type": "ack_chat", "msg_uuid": "0191e180-7d60-7000-aded-7d8b151cbd5b"}`)
 
-	assert.Equal(t, "ReportDelivered(8291264a-4581-4d12-96e5-e9fcfa6e68d9, 1, 123)", mockCourier.Calls[2])
+	assert.Equal(t, "ReportDelivered(8291264a-4581-4d12-96e5-e9fcfa6e68d9, 1, 0191e180-7d60-7000-aded-7d8b151cbd5b)", mockCourier.Calls[2])
 
 	client.Close(t)
 	time.Sleep(100 * time.Millisecond)

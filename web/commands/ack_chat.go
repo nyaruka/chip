@@ -11,5 +11,5 @@ const TypeAckChat string = "ack_chat"
 type AckChat struct {
 	baseCommand
 
-	MsgID models.MsgID `json:"msg_id" validate:"required"`
+	MsgUUID models.MsgUUID `json:"msg_uuid" validate:"required"`
 }

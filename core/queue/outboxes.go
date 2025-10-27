@@ -64,7 +64,7 @@ func (o *Outboxes) SetReady(rc redis.Conn, ch *models.Channel, chatID models.Cha
 // AddMessage adds a message to the outbox for the given chat id
 func (o *Outboxes) AddMessage(rc redis.Conn, ch *models.Channel, chatID models.ChatID, m *models.MsgOut) error {
 	outbox := Outbox{ch.UUID, chatID}
-	item := &Item{ID: ItemID(fmt.Sprintf("m%d", m.ID)), TS: m.Time.UnixMilli(), Msg: m}
+	item := &Item{ID: ItemID(fmt.Sprintf("m%s", m.UUID)), TS: m.Time.UnixMilli(), Msg: m}
 
 	rc.Send("MULTI")
 	rc.Send("RPUSH", o.outboxKey(outbox), jsonx.MustMarshal(item))

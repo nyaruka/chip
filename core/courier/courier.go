@@ -18,7 +18,7 @@ import (
 type Courier interface {
 	StartChat(context.Context, *models.Channel, models.ChatID) error
 	CreateMsg(context.Context, *models.Channel, *models.Contact, string) error
-	ReportDelivered(context.Context, *models.Channel, *models.Contact, models.MsgID) error
+	ReportDelivered(context.Context, *models.Channel, *models.Contact, models.MsgUUID) error
 }
 
 type courier struct {
@@ -72,10 +72,10 @@ func (c *courier) CreateMsg(ctx context.Context, ch *models.Channel, contact *mo
 	})
 }
 
-func (c *courier) ReportDelivered(ctx context.Context, ch *models.Channel, contact *models.Contact, msgID models.MsgID) error {
+func (c *courier) ReportDelivered(ctx context.Context, ch *models.Channel, contact *models.Contact, msgUUID models.MsgUUID) error {
 	return c.request(ctx, ch, &payload{
 		ChatID: contact.ChatID,
 		Secret: ch.Secret(),
-		Events: []Event{newMsgStatusEvent(msgID, MsgStatusDelivered)},
+		Events: []Event{newMsgStatusEvent(msgUUID, MsgStatusDelivered)},
 	})
 }

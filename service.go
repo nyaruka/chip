@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"fmt"
 	"log/slog"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -16,6 +15,7 @@ import (
 	"github.com/nyaruka/chip/runtime"
 	"github.com/nyaruka/chip/web"
 	"github.com/nyaruka/chip/web/events"
+	"github.com/nyaruka/gocommon/uuids"
 )
 
 type Service struct {
@@ -125,12 +125,13 @@ func (s *Service) ConfirmDelivery(ctx context.Context, ch *models.Channel, conta
 
 	// if this is a message, tell courier it was delivered
 	if strings.HasPrefix(string(itemID), "m") {
-		msgID, err := strconv.Atoi(strings.TrimPrefix(string(itemID), "m"))
-		if err != nil {
-			return fmt.Errorf("error parsing msg id: %w", err)
+		msgUUID := strings.TrimPrefix(string(itemID), "m")
+
+		if !uuids.Is(msgUUID) {
+			return fmt.Errorf("invalid msg uuid: %s", msgUUID)
 		}
 
-		if err := s.courier.ReportDelivered(ctx, ch, contact, models.MsgID(msgID)); err != nil {
+		if err := s.courier.ReportDelivered(ctx, ch, contact, models.MsgUUID(msgUUID)); err != nil {
 			return fmt.Errorf("error notifying courier of delivery: %w", err)
 		}
 	}
