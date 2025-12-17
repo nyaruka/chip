@@ -41,9 +41,9 @@ func NewDefaultConfig() *Config {
 		Domain:  "localhost",
 		SSL:     false,
 
-		DB:         "postgres://temba:temba@localhost/temba?sslmode=disable&Timezone=UTC",
-		Valkey:     "valkey://localhost:6379/5",
-		StorageURL: "http://localhost/media/",
+		DB:         "postgres://temba:temba@postgres/temba?sslmode=disable&Timezone=UTC",
+		Valkey:     "valkey://valkey:6379/5",
+		StorageURL: "http://localstack:4566/media/",
 
 		AWSAccessKeyID:     "",
 		AWSSecretAccessKey: "",
