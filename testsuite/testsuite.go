@@ -13,7 +13,7 @@ import (
 )
 
 const (
-	dbURL = "postgres://chip_test:temba@localhost/chip_test?sslmode=disable&Timezone=UTC"
+	dbURL = "postgres://chip_test:temba@postgres/chip_test?sslmode=disable&Timezone=UTC"
 	port  = 8071
 )
 
