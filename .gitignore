@@ -28,3 +28,11 @@ fabconfig.pyc
 
 # GoLand config folder
 .idea/
+
+.devcontainer
+
+# AI
+.claude/
+CLAUDE.md
+CODEX.md
+AGENTS.md
