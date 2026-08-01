@@ -30,23 +30,23 @@ func TestLoadContactMessages(t *testing.T) {
 	t2 := time.Date(2024, 4, 5, 17, 13, 45, 123456789, time.UTC)
 	t3 := time.Date(2024, 4, 5, 17, 14, 45, 123456789, time.UTC)
 
-	msg1ID := testsuite.InsertIncomingMsg(rt, orgID, chanID, bobID, bobURNID, "Hello", t1)
-	msg2ID := testsuite.InsertOutgoingMsg(rt, orgID, chanID, bobID, bobURNID, "There", t2)
-	msg3ID := testsuite.InsertIncomingMsg(rt, orgID, chanID, bobID, bobURNID, "World", t3)
+	msg1UUID := testsuite.InsertIncomingMsg(rt, orgID, chanID, bobID, bobURNID, "Hello", t1)
+	msg2UUID := testsuite.InsertOutgoingMsg(rt, orgID, chanID, bobID, bobURNID, "There", t2)
+	msg3UUID := testsuite.InsertIncomingMsg(rt, orgID, chanID, bobID, bobURNID, "World", t3)
 	testsuite.InsertIncomingMsg(rt, orgID, chanID, annID, annURNID, "Hello", time.Date(2024, 4, 5, 17, 12, 45, 123456789, time.UTC))
 
 	msgs, err = models.LoadContactMessages(ctx, rt, bobID, time.Now(), 10)
 	assert.NoError(t, err)
 	if assert.Len(t, msgs, 3) {
-		assert.Equal(t, msg3ID, msgs[0].ID)
+		assert.Equal(t, msg3UUID, msgs[0].UUID)
 		assert.Equal(t, "World", msgs[0].Text)
 		assert.Equal(t, models.DirectionIn, msgs[0].Direction)
 
-		assert.Equal(t, msg2ID, msgs[1].ID)
+		assert.Equal(t, msg2UUID, msgs[1].UUID)
 		assert.Equal(t, "There", msgs[1].Text)
 		assert.Equal(t, models.DirectionOut, msgs[1].Direction)
 
-		assert.Equal(t, msg1ID, msgs[2].ID)
+		assert.Equal(t, msg1UUID, msgs[2].UUID)
 		assert.Equal(t, "Hello", msgs[2].Text)
 		assert.Equal(t, models.DirectionIn, msgs[2].Direction)
 	}

@@ -38,24 +38,24 @@ func InsertContact(rt *runtime.Runtime, orgID models.OrgID, name string) models.
 	return id
 }
 
-func InsertIncomingMsg(rt *runtime.Runtime, orgID models.OrgID, channelID models.ChannelID, contactID models.ContactID, urnID models.URNID, text string, createdOn time.Time) models.MsgID {
+func InsertIncomingMsg(rt *runtime.Runtime, orgID models.OrgID, channelID models.ChannelID, contactID models.ContactID, urnID models.URNID, text string, createdOn time.Time) models.MsgUUID {
 	row := rt.DB.QueryRow(
 		`INSERT INTO msgs_msg(uuid, org_id, channel_id, contact_id, contact_urn_id, direction, msg_type, status, visibility, text, created_on, modified_on, next_attempt, msg_count, error_count)
-	  	 VALUES($1, $2, $3, $4, $5, 'I', 'T', 'H', 'V', $6, $7, NOW(), NOW(), 1, 1) RETURNING id`, uuids.NewV4(), orgID, channelID, contactID, urnID, text, createdOn,
+	  	 VALUES($1, $2, $3, $4, $5, 'I', 'T', 'H', 'V', $6, $7, NOW(), NOW(), 1, 1) RETURNING uuid`, uuids.NewV4(), orgID, channelID, contactID, urnID, text, createdOn,
 	)
-	var id models.MsgID
-	must(row.Scan(&id))
-	return id
+	var uuid models.MsgUUID
+	must(row.Scan(&uuid))
+	return uuid
 }
 
-func InsertOutgoingMsg(rt *runtime.Runtime, orgID models.OrgID, channelID models.ChannelID, contactID models.ContactID, urnID models.URNID, text string, createdOn time.Time) models.MsgID {
+func InsertOutgoingMsg(rt *runtime.Runtime, orgID models.OrgID, channelID models.ChannelID, contactID models.ContactID, urnID models.URNID, text string, createdOn time.Time) models.MsgUUID {
 	row := rt.DB.QueryRow(
 		`INSERT INTO msgs_msg(uuid, org_id, channel_id, contact_id, contact_urn_id, direction, msg_type, status, visibility, text, created_on, modified_on, next_attempt, msg_count, error_count)
-	  	 VALUES($1, $2, $3, $4, $5, 'O', 'T', 'Q', 'V', $6, $7, NOW(), NOW(), 1, 1) RETURNING id`, uuids.NewV4(), orgID, channelID, contactID, urnID, text, createdOn,
+	  	 VALUES($1, $2, $3, $4, $5, 'O', 'T', 'Q', 'V', $6, $7, NOW(), NOW(), 1, 1) RETURNING uuid`, uuids.NewV4(), orgID, channelID, contactID, urnID, text, createdOn,
 	)
-	var id models.MsgID
-	must(row.Scan(&id))
-	return id
+	var uuid models.MsgUUID
+	must(row.Scan(&uuid))
+	return uuid
 }
 
 func InsertURN(rt *runtime.Runtime, orgID models.OrgID, contactID models.ContactID, urn urns.URN) models.URNID {

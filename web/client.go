@@ -105,7 +105,7 @@ func (c *Client) onCommand(cmd commands.Command) error {
 		}
 
 		// for now all acks are msg ids
-		itemID := queue.ItemID(fmt.Sprintf("m%d", typed.MsgID))
+		itemID := queue.ItemID(fmt.Sprintf("m%s", typed.MsgUUID))
 
 		if err := c.server.service.ConfirmDelivery(ctx, c.channel, c.contact, itemID); err != nil {
 			return fmt.Errorf("error from service: %w", err)

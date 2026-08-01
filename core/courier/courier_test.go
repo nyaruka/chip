@@ -59,10 +59,10 @@ func TestCourier(t *testing.T) {
 	assert.Equal(t, "POST", mocks.Requests()[1].Method)
 	assert.Equal(t, `{"chat_id":"65vbbDAQCdPdEWlEhDGy4utO","secret":"sesame","events":[{"type":"msg_in","msg":{"text":"hello"}}]}`, getBody(mocks.Requests()[1]))
 
-	err = c.ReportDelivered(ctx, channel, bob, 1)
+	err = c.ReportDelivered(ctx, channel, bob, "019a0719-ac96-7213-92ec-172fd22ef691")
 	assert.NoError(t, err)
 	assert.Equal(t, "POST", mocks.Requests()[2].Method)
-	assert.Equal(t, `{"chat_id":"65vbbDAQCdPdEWlEhDGy4utO","secret":"sesame","events":[{"type":"msg_status","status":{"msg_id":1,"status":"delivered"}}]}`, getBody(mocks.Requests()[2]))
+	assert.Equal(t, `{"chat_id":"65vbbDAQCdPdEWlEhDGy4utO","secret":"sesame","events":[{"type":"msg_status","status":{"msg_uuid":"019a0719-ac96-7213-92ec-172fd22ef691","status":"delivered"}}]}`, getBody(mocks.Requests()[2]))
 
 	err = c.StartChat(ctx, channel, "65vbbDAQCdPdEWlEhDGy4utO")
 	assert.EqualError(t, err, "courier returned non-2XX status")

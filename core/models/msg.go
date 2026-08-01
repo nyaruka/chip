@@ -7,9 +7,11 @@ import (
 
 	"github.com/nyaruka/chip/runtime"
 	"github.com/nyaruka/gocommon/dbutil"
+	"github.com/nyaruka/gocommon/uuids"
 )
 
 type MsgID int64
+type MsgUUID uuids.UUID
 type MsgOrigin string
 type MsgDirection string
 
@@ -26,17 +28,17 @@ const (
 )
 
 type MsgIn struct {
-	ID   MsgID     `json:"id"`
+	UUID MsgUUID   `json:"uuid"`
 	Text string    `json:"text"`
 	Time time.Time `json:"time"`
 }
 
-func NewMsgIn(id MsgID, text string, t time.Time) *MsgIn {
-	return &MsgIn{ID: id, Text: text, Time: t}
+func NewMsgIn(uuid MsgUUID, text string, t time.Time) *MsgIn {
+	return &MsgIn{UUID: uuid, Text: text, Time: t}
 }
 
 type MsgOut struct {
-	ID          MsgID     `json:"id"`
+	UUID        MsgUUID   `json:"uuid"`
 	Text        string    `json:"text"`
 	Attachments []string  `json:"attachments,omitempty"`
 	Origin      MsgOrigin `json:"origin"`
@@ -44,12 +46,12 @@ type MsgOut struct {
 	Time        time.Time `json:"time"`
 }
 
-func NewMsgOut(id MsgID, text string, attachments []string, origin MsgOrigin, user *User, t time.Time) *MsgOut {
-	return &MsgOut{ID: id, Text: text, Attachments: attachments, Origin: origin, User: user, Time: t}
+func NewMsgOut(uuid MsgUUID, text string, attachments []string, origin MsgOrigin, user *User, t time.Time) *MsgOut {
+	return &MsgOut{UUID: uuid, Text: text, Attachments: attachments, Origin: origin, User: user, Time: t}
 }
 
 type DBMsg struct {
-	ID          MsgID        `json:"id"`
+	UUID        MsgUUID      `json:"uuid"`
 	Text        string       `json:"text"`
 	Attachments []string     `json:"attachments"`
 	Direction   MsgDirection `json:"direction"`
@@ -65,7 +67,7 @@ func (m *DBMsg) ToMsgIn() *MsgIn {
 		panic("can only be called on an inbound message")
 	}
 
-	return NewMsgIn(m.ID, m.Text, m.CreatedOn)
+	return NewMsgIn(m.UUID, m.Text, m.CreatedOn)
 }
 
 func (m *DBMsg) ToMsgOut(ctx context.Context, store Store) (*MsgOut, error) {
@@ -82,7 +84,7 @@ func (m *DBMsg) ToMsgOut(ctx context.Context, store Store) (*MsgOut, error) {
 		}
 	}
 
-	return NewMsgOut(m.ID, m.Text, m.Attachments, m.origin(), user, m.CreatedOn), nil
+	return NewMsgOut(m.UUID, m.Text, m.Attachments, m.origin(), user, m.CreatedOn), nil
 }
 
 func (m *DBMsg) origin() MsgOrigin {
@@ -98,7 +100,7 @@ func (m *DBMsg) origin() MsgOrigin {
 
 const sqlSelectContactMessages = `
 SELECT row_to_json(r) FROM (
-    SELECT id, text, attachments, direction, broadcast_id, flow_id, ticket_id, created_by_id, created_on
+    SELECT uuid, text, attachments, direction, broadcast_id, flow_id, ticket_id, created_by_id, created_on
       FROM msgs_msg 
      WHERE contact_id = $1 AND msg_type = 'T' AND visibility IN ('V', 'A') AND created_on < $2
   ORDER BY created_on DESC, id DESC 

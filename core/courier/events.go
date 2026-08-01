@@ -47,8 +47,8 @@ const (
 )
 
 type msgStatusUpdate struct {
-	MsgID  models.MsgID `json:"msg_id"`
-	Status MsgStatus    `json:"status"`
+	MsgUUID models.MsgUUID `json:"msg_uuid"`
+	Status  MsgStatus      `json:"status"`
 }
 
 type msgStatusEvent struct {
@@ -56,9 +56,9 @@ type msgStatusEvent struct {
 	Status msgStatusUpdate `json:"status"`
 }
 
-func newMsgStatusEvent(msgID models.MsgID, status MsgStatus) Event {
+func newMsgStatusEvent(msgUUID models.MsgUUID, status MsgStatus) Event {
 	return &msgStatusEvent{
 		baseEvent: baseEvent{Type_: "msg_status"},
-		Status:    msgStatusUpdate{MsgID: msgID, Status: status},
+		Status:    msgStatusUpdate{MsgUUID: msgUUID, Status: status},
 	}
 }

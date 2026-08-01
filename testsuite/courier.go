@@ -36,10 +36,10 @@ func (c *MockCourier) CreateMsg(ctx context.Context, ch *models.Channel, contact
 	return nil
 }
 
-func (c *MockCourier) ReportDelivered(ctx context.Context, ch *models.Channel, contact *models.Contact, msgID models.MsgID) error {
-	c.Calls = append(c.Calls, fmt.Sprintf("ReportDelivered(%s, %d, %d)", ch.UUID, contact.ID, msgID))
+func (c *MockCourier) ReportDelivered(ctx context.Context, ch *models.Channel, contact *models.Contact, msgUUID models.MsgUUID) error {
+	c.Calls = append(c.Calls, fmt.Sprintf("ReportDelivered(%s, %d, %s)", ch.UUID, contact.ID, msgUUID))
 
-	_, err := c.rt.DB.ExecContext(context.Background(), `UPDATE msgs_msg SET status = 'D', modified_on = NOW() WHERE id = $1 AND channel_id = $2`, msgID, ch.ID)
+	_, err := c.rt.DB.ExecContext(context.Background(), `UPDATE msgs_msg SET status = 'D', modified_on = NOW() WHERE uuid = $1 AND channel_id = $2`, msgUUID, ch.ID)
 	noError(err)
 
 	return nil

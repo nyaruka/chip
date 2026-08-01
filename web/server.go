@@ -141,7 +141,7 @@ type sendRequest struct {
 	ChatID models.ChatID `json:"chat_id"              validate:"required"`
 	Secret string        `json:"secret"               validate:"required"`
 	Msg    struct {
-		ID          models.MsgID     `json:"id"       validate:"required"`
+		UUID        models.MsgUUID   `json:"uuid"       validate:"required,uuid"`
 		Text        string           `json:"text"`
 		Attachments []string         `json:"attachments"`
 		Origin      models.MsgOrigin `json:"origin"   validate:"required"`
@@ -177,7 +177,7 @@ func (s *Server) handleSend(ctx context.Context, r *http.Request, w http.Respons
 		}
 	}
 
-	err = s.service.QueueMsgOut(ctx, ch, contact, models.NewMsgOut(payload.Msg.ID, payload.Msg.Text, payload.Msg.Attachments, payload.Msg.Origin, user, time.Now()))
+	err = s.service.QueueMsgOut(ctx, ch, contact, models.NewMsgOut(payload.Msg.UUID, payload.Msg.Text, payload.Msg.Attachments, payload.Msg.Origin, user, time.Now()))
 	if err == nil {
 		writeMarshalled(w, http.StatusOK, map[string]any{"status": "queued"})
 	} else {
