@@ -24,7 +24,7 @@ const (
 	publicPrefix = "/wc"
 
 	// the prefix of the internal listener's routes, as the internal load balancer routes them
-	internalPrefix = "/chi"
+	internalPrefix = "/wi"
 )
 
 // Server serves on two listeners: a public one for the chat widget, whose requests are each addressed to a webchat
