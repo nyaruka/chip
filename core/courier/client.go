@@ -118,7 +118,7 @@ func (c *client) Status(ctx context.Context, ch *models.Channel, status *StatusU
 // post posts the given payload to one of the channel's endpoints on courier. An error is only a failure to get an
 // answer - what courier answered is the response, whatever its status.
 func (c *client) post(ctx context.Context, ch *models.Channel, action string, payload any) (*Response, error) {
-	url := fmt.Sprintf("%s/c/wch/%s/%s", c.rt.Config.CourierURL, ch.UUID(), action)
+	url := fmt.Sprintf("%s/c/chp/%s/%s", c.rt.Config.CourierURL, ch.UUID(), action)
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(jsonx.MustMarshal(payload)))
 	if err != nil {

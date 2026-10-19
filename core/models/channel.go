@@ -7,7 +7,7 @@ import (
 )
 
 // the type code of webchat channels on the platform
-const ChannelTypeWebChat = "WCH"
+const ChannelTypeWebChat = "CHP"
 
 // the channel config keys chip reads
 const (
