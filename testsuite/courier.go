@@ -72,9 +72,9 @@ func (m *MockCourier) Clear() {
 }
 
 func (m *MockCourier) handle(w http.ResponseWriter, r *http.Request) {
-	// requests are to /c/wch/<channel-uuid>/<action>
+	// requests are to /c/chp/<channel-uuid>/<action>
 	parts := strings.Split(strings.Trim(r.URL.Path, "/"), "/")
-	if len(parts) != 4 || parts[0] != "c" || parts[1] != "wch" || r.Method != http.MethodPost {
+	if len(parts) != 4 || parts[0] != "c" || parts[1] != "chp" || r.Method != http.MethodPost {
 		http.NotFound(w, r)
 		return
 	}
