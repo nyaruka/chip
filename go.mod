@@ -12,7 +12,7 @@ require (
 	github.com/lib/pq v1.12.3
 	github.com/nyaruka/ezconf v0.8.0
 	github.com/nyaruka/gocommon v1.97.0
-	github.com/nyaruka/vkutil v0.29.0
+	github.com/nyaruka/vkutil v0.30.0
 	github.com/stretchr/testify v1.12.1
 	github.com/vinovest/sqlx v1.7.2
 )
