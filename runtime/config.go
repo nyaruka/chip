@@ -38,7 +38,7 @@ type Config struct {
 func NewDefaultConfig() *Config {
 	return &Config{
 		DB:     "postgres://temba:temba@postgres/temba?sslmode=disable",
-		Valkey: "valkey://valkey:6379/15",
+		Valkey: "valkey://valkey:6379/7",
 
 		Address:         "",
 		Port:            8070,
