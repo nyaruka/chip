@@ -63,6 +63,12 @@ func TestSend(t *testing.T) {
 		"quick_replies": [{"type": "text", "text": "Yes"}]
 	}`, string(pubs[2]))
 
+	// the contact's email is accepted but never shown to the chat
+	assert.Equal(t, 200, send(`{`+msg+`, "text": "Hello there", "email": "bob@example.com"}`).Code)
+	pubs = testsuite.Publications(t, rt, socket)
+	require.Len(t, pubs, 4)
+	assert.JSONEq(t, `{"type": "msg_out", "created_on": "2025-10-13T11:20:30Z", "msg_uuid": "0191e180-7d60-7000-aded-7d8b151cbd5b", "text": "Hello there"}`, string(pubs[3]))
+
 	// bad requests: a missing or malformed channel, chat ID or message UUID
 	for _, body := range []string{
 		`{"chat_id": "` + testChatID + `", "msg_uuid": "0191e180-7d60-7000-aded-7d8b151cbd5b", "text": "Hi"}`,
@@ -74,7 +80,7 @@ func TestSend(t *testing.T) {
 	} {
 		assert.Equal(t, 400, send(body).Code, body)
 	}
-	assert.Len(t, testsuite.Publications(t, rt, socket), 3)
+	assert.Len(t, testsuite.Publications(t, rt, socket), 4)
 
 	// a publish failure is an error, for courier to retry
 	rt.Centrifugo.Client.(*centrifugo.MockClient).SetError(errors.New("boom"))

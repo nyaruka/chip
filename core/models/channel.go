@@ -14,6 +14,12 @@ const (
 	// the host[:port] values (no scheme) of the sites the widget may be embedded on - empty or absent means
 	// unrestricted
 	ConfigAllowedDomains = "allowed_domains"
+
+	// how the channel emails visitors messages they didn't see in the chat - an empty domain means it doesn't
+	ConfigEmailFrom     = "email_from"
+	ConfigMailgunDomain = "mailgun_domain"
+	ConfigMailgunRegion = "mailgun_region"
+	ConfigMailgunAPIKey = "mailgun_api_key"
 )
 
 // ChannelConfig is a channel's JSON config as the platform stores it
@@ -54,6 +60,34 @@ func (c *Channel) AllowedDomains() []string {
 		}
 	}
 	return domains
+}
+
+// EmailConfig is how a channel sends email, through the Mailgun domain it's configured with
+type EmailConfig struct {
+	From   string
+	Domain string
+	Region string
+	APIKey string
+}
+
+// EmailConfig returns the channel's email config, or nil if it isn't configured to send email. A channel with only
+// some of the settings can't send, so is treated the same as one with none.
+func (c *Channel) EmailConfig() *EmailConfig {
+	cfg := &EmailConfig{
+		From:   c.configString(ConfigEmailFrom),
+		Domain: c.configString(ConfigMailgunDomain),
+		Region: c.configString(ConfigMailgunRegion),
+		APIKey: c.configString(ConfigMailgunAPIKey),
+	}
+	if cfg.From == "" || cfg.Domain == "" || cfg.APIKey == "" {
+		return nil
+	}
+	return cfg
+}
+
+func (c *Channel) configString(key string) string {
+	s, _ := c.Config_[key].(string)
+	return s
 }
 
 const sqlSelectChannel = `

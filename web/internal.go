@@ -18,6 +18,9 @@ type sendPayload struct {
 	Attachments  []string            `json:"attachments"`
 	QuickReplies []models.QuickReply `json:"quick_replies" validate:"dive"`
 	User         *msgUser            `json:"user"`
+
+	// the contact's email address, if they have one, for emailing them messages they don't see in the chat
+	Email string `json:"email"`
 }
 
 // handleSend is our handler for courier sending a message to a visitor: it's published to the conversation's chat

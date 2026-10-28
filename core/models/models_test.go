@@ -83,3 +83,27 @@ func TestTextQuickReplies(t *testing.T) {
 	assert.Equal(t, []models.QuickReply{{Type: "text", Text: "Yes"}, {Type: "text", Text: "No"}}, models.TextQuickReplies(qrs))
 	assert.Nil(t, models.TextQuickReplies(nil))
 }
+
+func TestChannelEmailConfig(t *testing.T) {
+	config := func(kvs ...string) models.ChannelConfig {
+		c := models.ChannelConfig{}
+		for i := 0; i < len(kvs); i += 2 {
+			c[kvs[i]] = kvs[i+1]
+		}
+		return c
+	}
+
+	ch := &models.Channel{Config_: config("email_from", "help@example.com", "mailgun_domain", "mg.example.com", "mailgun_region", "eu", "mailgun_api_key", "key-1")}
+	assert.Equal(t, &models.EmailConfig{From: "help@example.com", Domain: "mg.example.com", Region: "eu", APIKey: "key-1"}, ch.EmailConfig())
+
+	// email is off without a domain, and a channel missing any other setting can't send either
+	for _, c := range []models.ChannelConfig{
+		{},
+		config("email_from", "help@example.com", "mailgun_domain", "", "mailgun_region", "us", "mailgun_api_key", "key-1"),
+		config("email_from", "", "mailgun_domain", "mg.example.com", "mailgun_region", "us", "mailgun_api_key", "key-1"),
+		config("email_from", "help@example.com", "mailgun_domain", "mg.example.com", "mailgun_region", "us", "mailgun_api_key", ""),
+	} {
+		ch := &models.Channel{Config_: c}
+		assert.Nil(t, ch.EmailConfig(), c)
+	}
+}
