@@ -1,3 +1,7 @@
+## v26.3.3 (2026-10-28)
+ * Default to Valkey DB 7 since chip's keys are its own
+ * Fix the Licensed Work name in LICENSE
+
 ## v26.3.2 (2026-10-20)
  * Update vkutil to v0.30.0 for default Valkey connection timeouts
 
