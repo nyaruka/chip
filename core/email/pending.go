@@ -25,7 +25,8 @@ const (
 
 // a conversation's pending email is a hash of its address, when its oldest message was held back and how many sends
 // have failed, plus the set of messages held back. Conversations are queued for sending in one sorted set, scored by
-// when they're due.
+// when they're due. A conversation's due time only ever moves later, so holding back another message never cuts short
+// the wait before retrying a failed send.
 const keyDue = "chat-email-due"
 
 func pendingKeys(ch models.ChannelUUID, chatID string) (member, state, msgs string) {
@@ -40,7 +41,7 @@ redis.call("HSET", KEYS[2], "email", ARGV[3])
 redis.call("HSETNX", KEYS[2], "first", ARGV[4])
 local first = tonumber(redis.call("HGET", KEYS[2], "first"))
 local due = math.min(tonumber(ARGV[4]) + tonumber(ARGV[5]), first + tonumber(ARGV[6]))
-redis.call("ZADD", KEYS[1], due, ARGV[1])
+redis.call("ZADD", KEYS[1], "GT", due, ARGV[1])
 redis.call("EXPIRE", KEYS[2], ARGV[7])
 redis.call("EXPIRE", KEYS[3], ARGV[7])
 `)
@@ -65,13 +66,13 @@ return {state, msgs}
 `)
 
 // KEYS: due, state, msgs. ARGV: member, address, attempts, now, due, TTL, msg UUIDs... Anything held back while the
-// failed send was in flight is merged in, and keeps its newer address and due time.
+// failed send was in flight is merged in, keeping its newer address.
 var requeueScript = valkey.NewScript(3, `
 redis.call("SADD", KEYS[3], unpack(ARGV, 7))
 redis.call("HSETNX", KEYS[2], "email", ARGV[2])
 redis.call("HSET", KEYS[2], "attempts", ARGV[3])
 redis.call("HSETNX", KEYS[2], "first", ARGV[4])
-redis.call("ZADD", KEYS[1], "NX", ARGV[5], ARGV[1])
+redis.call("ZADD", KEYS[1], "GT", ARGV[5], ARGV[1])
 redis.call("EXPIRE", KEYS[2], ARGV[6])
 redis.call("EXPIRE", KEYS[3], ARGV[6])
 `)

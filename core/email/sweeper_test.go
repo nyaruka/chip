@@ -169,6 +169,11 @@ func TestSweeper(t *testing.T) {
 
 	tick(7*time.Hour + time.Minute)
 	assertvk.ZScore(t, vc, "chat-email-due", member, float64(t0.Add(7*time.Hour+6*time.Minute).Unix()))
+
+	// holding back another message doesn't cut that wait short, and joins the batch being retried
+	hold(7*time.Hour+2*time.Minute, msg2, "bob@example.com")
+	assertvk.ZScore(t, vc, "chat-email-due", member, float64(t0.Add(7*time.Hour+6*time.Minute).Unix()))
+	assertvk.SMembers(t, vc, "chat-email-msgs:"+member, []string{string(msg2), string(msg3)})
 	tick(7*time.Hour + 6*time.Minute)
 	assertvk.ZScore(t, vc, "chat-email-due", member, float64(t0.Add(7*time.Hour+21*time.Minute).Unix()))
 	assertvk.HGet(t, vc, "chat-email:"+member, "attempts", "3")
