@@ -89,10 +89,13 @@ func TestSweeper(t *testing.T) {
 	testdb.InsertMsg(t, rt, ch, visitor, msg3, models.MsgOutgoing, "Bye", t0, testdb.MsgOptions{})
 
 	sweeper := email.NewSweeper(rt)
-	hold := func(d time.Duration, msg models.MsgUUID, address string) {
-		setNow(d)
-		require.NoError(t, email.Hold(ctx, rt, ch.UUID(), chatID, msg, address))
+	holdAs := func(connected bool) func(time.Duration, models.MsgUUID, string) {
+		return func(d time.Duration, msg models.MsgUUID, address string) {
+			setNow(d)
+			require.NoError(t, email.Hold(ctx, rt, ch.UUID(), chatID, msg, address, connected))
+		}
 	}
+	hold, holdOffline := holdAs(true), holdAs(false)
 	tick := func(d time.Duration) {
 		setNow(d)
 		require.NoError(t, sweeper.Tick(ctx))
@@ -127,8 +130,21 @@ func TestSweeper(t *testing.T) {
 	assertNothingPending()
 
 	// and a sweep that finds nothing due sends nothing
-	tick(time.Hour)
+	tick(30 * time.Minute)
 	assert.Empty(t, mailgun.popSent())
+
+	// a visitor without the chat open is emailed almost straight away, and once they've gone that brings forward
+	// what was held back while they had it open
+	hold(30*time.Minute, msg2, "bob@example.com")
+	assertvk.ZScore(t, vc, "chat-email-due", member, float64(t0.Add(33*time.Minute).Unix()))
+	holdOffline(31*time.Minute, msg3, "bob@example.com")
+	assertvk.ZScore(t, vc, "chat-email-due", member, float64(t0.Add(31*time.Minute+10*time.Second).Unix()))
+	tick(31*time.Minute + 10*time.Second)
+	sent = mailgun.popSent()
+	require.Len(t, sent, 1)
+	assert.Contains(t, sent[0].Get("text"), "Are you there?")
+	assert.Contains(t, sent[0].Get("text"), "Bye")
+	assertNothingPending()
 
 	// a chatty conversation is only held back so long
 	hold(time.Hour, msg3, "bob@example.com")
@@ -170,8 +186,9 @@ func TestSweeper(t *testing.T) {
 	tick(7*time.Hour + time.Minute)
 	assertvk.ZScore(t, vc, "chat-email-due", member, float64(t0.Add(7*time.Hour+6*time.Minute).Unix()))
 
-	// holding back another message doesn't cut that wait short, and joins the batch being retried
-	hold(7*time.Hour+2*time.Minute, msg2, "bob@example.com")
+	// holding back another message doesn't cut that wait short, even for a visitor who isn't connected, and joins
+	// the batch being retried
+	holdOffline(7*time.Hour+2*time.Minute, msg2, "bob@example.com")
 	assertvk.ZScore(t, vc, "chat-email-due", member, float64(t0.Add(7*time.Hour+6*time.Minute).Unix()))
 	assertvk.SMembers(t, vc, "chat-email-msgs:"+member, []string{string(msg2), string(msg3)})
 	tick(7*time.Hour + 6*time.Minute)
