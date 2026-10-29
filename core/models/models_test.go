@@ -2,6 +2,7 @@ package models_test
 
 import (
 	"testing"
+	"time"
 
 	"github.com/nyaruka/chip/v26/core/models"
 	"github.com/nyaruka/chip/v26/testsuite"
@@ -108,4 +109,65 @@ func TestChannelEmailConfig(t *testing.T) {
 		ch := &models.Channel{Config_: c}
 		assert.Nil(t, ch.EmailConfig(), c)
 	}
+}
+
+func TestLoadOrg(t *testing.T) {
+	ctx, rt := testsuite.Runtime(t)
+
+	org, err := models.LoadOrg(ctx, rt.DB, testdb.Org2)
+	require.NoError(t, err)
+	assert.Equal(t, testdb.Org2, org.ID())
+	assert.Equal(t, "Nyaruka", org.Name())
+	assert.Equal(t, "America/Los_Angeles", org.Timezone().String())
+
+	// a timezone we don't know is shown as UTC
+	org.Timezone_ = "Mars/Olympus_Mons"
+	assert.Equal(t, time.UTC, org.Timezone())
+
+	// workspaces that don't exist or aren't active aren't loaded
+	org, err = models.LoadOrg(ctx, rt.DB, 12345)
+	require.NoError(t, err)
+	assert.Nil(t, org)
+
+	rt.DB.MustExec(`UPDATE orgs_org SET is_active = FALSE WHERE id = $1`, testdb.Org2)
+	org, err = models.LoadOrg(ctx, rt.DB, testdb.Org2)
+	require.NoError(t, err)
+	assert.Nil(t, org)
+}
+
+func TestGetUnreadChatMsgs(t *testing.T) {
+	ctx, rt := testsuite.Runtime(t)
+
+	ch := testdb.InsertChannel(t, rt, testdb.Org1, "0665bf36-4d2e-4c3f-b8a1-9f8e6a5c2d71", nil)
+	visitor := testdb.InsertVisitor(t, rt, ch, "vM0GGhDrqpTQefIEinK0up3C")
+	otherVisitor := testdb.InsertVisitor(t, rt, ch, "xA9GGhDrqpTQefIEinK0up3C")
+	adminID := testdb.UserID(t, rt, "admin1@textit.com")
+	createdOn := time.Date(2025, 10, 13, 11, 20, 30, 0, time.UTC)
+
+	testdb.InsertMsg(t, rt, ch, visitor, "0191e180-7d60-7000-aded-7d8b151cbd51", models.MsgOutgoing, "Hi", createdOn, testdb.MsgOptions{})
+	testdb.InsertMsg(t, rt, ch, visitor, "0191e180-7d60-7000-aded-7d8b151cbd52", models.MsgOutgoing, "Read", createdOn, testdb.MsgOptions{Status: "R"})
+	testdb.InsertMsg(t, rt, ch, visitor, "0191e180-7d60-7000-aded-7d8b151cbd53", models.MsgOutgoing, "Deleted", createdOn, testdb.MsgOptions{Visibility: "X"})
+	testdb.InsertMsg(t, rt, ch, visitor, "0191e180-7d60-7000-aded-7d8b151cbd54", models.MsgIncoming, "Incoming", createdOn, testdb.MsgOptions{})
+	testdb.InsertMsg(t, rt, ch, otherVisitor, "0191e180-7d60-7000-aded-7d8b151cbd55", models.MsgOutgoing, "Not theirs", createdOn, testdb.MsgOptions{})
+	testdb.InsertMsg(t, rt, ch, visitor, "0191e180-7d60-7000-aded-7d8b151cbd56", models.MsgOutgoing, "From Andy", createdOn, testdb.MsgOptions{SentBy: adminID, Status: "D"})
+	testdb.InsertMsg(t, rt, ch, visitor, "0191e180-7d60-7000-aded-7d8b151cbd57", models.MsgOutgoing, "Not asked for", createdOn, testdb.MsgOptions{})
+
+	msgs, err := models.GetUnreadChatMsgs(ctx, rt.DB, ch, visitor, []models.MsgUUID{
+		"0191e180-7d60-7000-aded-7d8b151cbd56",
+		"0191e180-7d60-7000-aded-7d8b151cbd51",
+		"0191e180-7d60-7000-aded-7d8b151cbd52",
+		"0191e180-7d60-7000-aded-7d8b151cbd53",
+		"0191e180-7d60-7000-aded-7d8b151cbd54",
+		"0191e180-7d60-7000-aded-7d8b151cbd55",
+	})
+	require.NoError(t, err)
+	require.Len(t, msgs, 2)
+	assert.Equal(t, models.MsgUUID("0191e180-7d60-7000-aded-7d8b151cbd51"), msgs[0].UUID)
+	assert.Nil(t, msgs[0].Sender())
+	assert.Equal(t, models.MsgUUID("0191e180-7d60-7000-aded-7d8b151cbd56"), msgs[1].UUID)
+	assert.Equal(t, "Andy Admin", msgs[1].Sender().Name())
+
+	msgs, err = models.GetUnreadChatMsgs(ctx, rt.DB, ch, visitor, nil)
+	require.NoError(t, err)
+	assert.Empty(t, msgs)
 }

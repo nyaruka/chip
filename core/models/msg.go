@@ -115,3 +115,22 @@ func GetChatMsgs(ctx context.Context, db DBorTx, ch *Channel, visitor *Visitor, 
 	}
 	return msgs, nil
 }
+
+// only outgoing messages are ever held back for email, and a message the visitor has read (R) is one they saw
+const sqlSelectUnreadChatMsgs = `
+SELECT m.uuid, m.direction, m.text, m.attachments, m.quickreplies, m.created_on,
+       u.id AS user_id, u.uuid AS user_uuid, u.first_name AS user_first_name, u.last_name AS user_last_name, u.avatar AS user_avatar
+  FROM msgs_msg m
+  LEFT JOIN users_user u ON u.id = m.created_by_id
+ WHERE m.uuid = ANY($1) AND m.contact_urn_id = $2 AND m.channel_id = $3 AND m.direction = 'O' AND m.visibility = 'V' AND m.status <> 'R'
+ ORDER BY m.uuid`
+
+// GetUnreadChatMsgs returns those of the given messages that are visible outgoing messages in the given visitor's
+// conversation on the given channel which the visitor hasn't read, oldest first.
+func GetUnreadChatMsgs(ctx context.Context, db DBorTx, ch *Channel, visitor *Visitor, uuids []MsgUUID) ([]*ChatMsg, error) {
+	msgs := make([]*ChatMsg, 0, len(uuids))
+	if err := db.SelectContext(ctx, &msgs, sqlSelectUnreadChatMsgs, pq.Array(uuids), visitor.URNID, ch.ID()); err != nil {
+		return nil, fmt.Errorf("error loading unread chat messages: %w", err)
+	}
+	return msgs, nil
+}

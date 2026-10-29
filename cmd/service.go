@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/nyaruka/chip/v26/core/courier"
+	"github.com/nyaruka/chip/v26/core/email"
 	"github.com/nyaruka/chip/v26/runtime"
 	"github.com/nyaruka/chip/v26/web"
 )
@@ -44,6 +45,9 @@ func Service(cfg *runtime.Config, version, date string, logHandler slog.Handler)
 		return err
 	}
 
+	sweeper := email.NewSweeper(rt)
+	sweeper.Start()
+
 	ch := make(chan os.Signal, 1)
 	signal.Notify(ch, syscall.SIGINT, syscall.SIGTERM)
 	log.Info("stopping", "signal", <-ch)
@@ -57,6 +61,7 @@ func Service(cfg *runtime.Config, version, date string, logHandler slog.Handler)
 	if err := server.Stop(); err != nil {
 		log.Error("error stopping server", "error", err)
 	}
+	sweeper.Stop()
 	rt.Stop()
 
 	return nil
