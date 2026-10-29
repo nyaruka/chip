@@ -7,8 +7,10 @@ import (
 
 	"github.com/nyaruka/chip/v26/core/models"
 	"github.com/nyaruka/chip/v26/testsuite"
+	"github.com/nyaruka/chip/v26/testsuite/testdb"
 	"github.com/nyaruka/gocommon/centrifugo"
 	"github.com/nyaruka/gocommon/dates"
+	"github.com/nyaruka/vkutil/assertvk"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -82,11 +84,52 @@ func TestSend(t *testing.T) {
 	}
 	assert.Len(t, testsuite.Publications(t, rt, socket), 4)
 
+	// the channel doesn't send email, so nothing was held back for it
+	vc = rt.VK.Get()
+	assertvk.ZCard(t, vc, "chat-email-due", 0)
+	vc.Close()
+
 	// a publish failure is an error, for courier to retry
 	rt.Centrifugo.Client.(*centrifugo.MockClient).SetError(errors.New("boom"))
 	resp = send(`{` + msg + `, "text": "Hello there"}`)
 	assert.Equal(t, 500, resp.Code)
 	assert.JSONEq(t, `{"error": "error publishing event"}`, resp.Body)
+}
+
+func TestSendHoldsForEmail(t *testing.T) {
+	rt, s, _ := setup(t)
+
+	vc := rt.VK.Get()
+	defer vc.Close()
+
+	testdb.InsertChannel(t, rt, testdb.Org1, otherChannelUUID, map[string]any{
+		"email_from": "help@example.com", "mailgun_domain": "mg.example.com", "mailgun_api_key": "key-1",
+	})
+
+	send := func(body string) *response { return internal(s, "/send", "Token sesame", body) }
+	msg := func(uuid string) string {
+		return `"channel_uuid": "` + string(otherChannelUUID) + `", "chat_id": "` + testChatID + `", "msg_uuid": "` + uuid + `", "text": "Hi"`
+	}
+	member := string(otherChannelUUID) + ":" + testChatID
+
+	// a message to a contact with an email, on a channel that sends email, is held back once delivered
+	assert.Equal(t, 200, send(`{`+msg("0191e180-7d60-7000-aded-7d8b151cbd5b")+`, "email": "bob@example.com"}`).Code)
+	assert.Equal(t, 200, send(`{`+msg("0191e180-7d60-7000-aded-7d8b151cbd5c")+`, "email": "bob@example.com"}`).Code)
+	assertvk.ZCard(t, vc, "chat-email-due", 1)
+	assertvk.SMembers(t, vc, "chat-email-msgs:"+member, []string{"0191e180-7d60-7000-aded-7d8b151cbd5b", "0191e180-7d60-7000-aded-7d8b151cbd5c"})
+	assertvk.HGet(t, vc, "chat-email:"+member, "email", "bob@example.com")
+
+	// one without an email means the contact no longer has one, so nothing is held back for them
+	assert.Equal(t, 200, send(`{`+msg("0191e180-7d60-7000-aded-7d8b151cbd5d")+`}`).Code)
+	assertvk.ZCard(t, vc, "chat-email-due", 0)
+	assertvk.NotExists(t, vc, "chat-email-msgs:"+member)
+
+	// and one that isn't delivered isn't held back either
+	_, err := vc.Do("SET", centrifugo.SubscriptionKey(models.ChatSocket(otherChannelUUID, testChatID)), "1")
+	require.NoError(t, err)
+	rt.Centrifugo.Client.(*centrifugo.MockClient).SetError(errors.New("boom"))
+	assert.Equal(t, 500, send(`{`+msg("0191e180-7d60-7000-aded-7d8b151cbd5e")+`, "email": "bob@example.com"}`).Code)
+	assertvk.ZCard(t, vc, "chat-email-due", 0)
 }
 
 func TestEvent(t *testing.T) {

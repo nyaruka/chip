@@ -1,8 +1,10 @@
 package web
 
 import (
+	"context"
 	"net/http"
 
+	"github.com/nyaruka/chip/v26/core/email"
 	"github.com/nyaruka/chip/v26/core/models"
 	"github.com/nyaruka/gocommon/centrifugo"
 	"github.com/nyaruka/gocommon/dates"
@@ -27,6 +29,9 @@ type sendPayload struct {
 // socket as a msg_out event. Like all socket publishes this is presence-aware and best-effort - if the visitor
 // doesn't currently have the chat open the publish is dropped, and the message is still considered sent. A failure
 // to publish is an error, which courier treats as a failed send and retries.
+//
+// Once published, a message to a contact with an email on a channel that sends email is held back, to be emailed if
+// the visitor doesn't read it. Email is best-effort, so failing to hold it back doesn't fail the send.
 func (s *Server) handleSend(w http.ResponseWriter, r *http.Request) {
 	payload := &sendPayload{}
 	if err := readJSON(w, r, payload); err != nil {
@@ -48,7 +53,33 @@ func (s *Server) handleSend(w http.ResponseWriter, r *http.Request) {
 		User:         payload.User,
 	}
 
-	s.publish(w, r, models.ChatSocket(payload.ChannelUUID, payload.ChatID), event)
+	socket := models.ChatSocket(payload.ChannelUUID, payload.ChatID)
+	if err := s.rt.Centrifugo.Publish(r.Context(), &centrifugo.Publication{Channel: socket, Data: event}); err != nil {
+		logRequestError(r, "error publishing event", err, "socket", socket)
+		writeError(w, http.StatusInternalServerError, "error publishing event")
+		return
+	}
+
+	if err := s.holdForEmail(r.Context(), payload); err != nil {
+		logRequestError(r, "error holding message for email", err, "socket", socket)
+	}
+
+	writeJSON(w, http.StatusOK, struct{}{})
+}
+
+// holdForEmail holds back a delivered message for emailing. A send without an email means the contact no longer has
+// one, so anything already held back for them is dropped.
+func (s *Server) holdForEmail(ctx context.Context, payload *sendPayload) error {
+	if payload.Email == "" {
+		return email.Drop(ctx, s.rt, payload.ChannelUUID, payload.ChatID)
+	}
+
+	ch, err := models.LoadChannel(ctx, s.rt.DB, payload.ChannelUUID)
+	if err != nil || ch == nil || ch.EmailConfig() == nil {
+		return err
+	}
+
+	return email.Hold(ctx, s.rt, payload.ChannelUUID, payload.ChatID, payload.MsgUUID, payload.Email)
 }
 
 // eventPayload is something other than a message that courier has us show the visitor - a user typing
