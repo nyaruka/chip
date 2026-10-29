@@ -74,4 +74,31 @@ https://example.com/map.png
 You're receiving this because you chatted with Nyaruka and haven't seen these messages yet. To reply, continue the chat on our website.
 `, e.Text)
 	assert.NotContains(t, e.HTML, `line-height`) // no empty text block
+
+	// attachment names come from the decoded path, and the HTML escapes names and URLs - neutralizing any that
+	// aren't safe to link
+	e, err = email.Render("bob@example.com", "Nyaruka", time.UTC, []*models.ChatMsg{
+		{
+			Direction:      models.MsgOutgoing,
+			Attachments:    []string{"application/pdf:https://example.com/files/price%20list.pdf?X-Amz-Signature=abc", "text/html:javascript:alert(1)"},
+			QuickReplies:   models.QuickReplies{{Type: "text", Text: "Yes"}, {Type: "text", Text: "No"}},
+			CreatedOn:      time.Date(2025, 10, 13, 11, 20, 30, 0, time.UTC),
+			UserID_:        sql.NullInt64{Int64: 1, Valid: true},
+			UserFirstName_: sql.NullString{String: "<b>Andy</b>", Valid: true},
+		},
+	})
+	require.NoError(t, err)
+	assert.Contains(t, e.HTML, `>price list.pdf</a>`)
+	assert.Contains(t, e.HTML, `<strong style="color: #222;">&lt;b&gt;Andy&lt;/b&gt;</strong>`)
+	assert.Contains(t, e.HTML, `<a href="#ZgotmplZ">`)
+	assert.NotContains(t, e.HTML, `="javascript:`)
+	assert.Contains(t, e.HTML, `Options: Yes · No`)
+	assert.Equal(t, `<b>Andy</b> (Oct 13, 11:20):
+https://example.com/files/price%20list.pdf?X-Amz-Signature=abc
+javascript:alert(1)
+Options: Yes · No
+
+--
+You're receiving this because you chatted with Nyaruka and haven't seen these messages yet. To reply, continue the chat on our website.
+`, e.Text)
 }

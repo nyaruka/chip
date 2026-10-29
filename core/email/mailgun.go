@@ -34,6 +34,9 @@ type Email struct {
 	HTML    string
 }
 
+// ErrUnsendable is an email that can't be sent however often it's tried, without even asking Mailgun
+var ErrUnsendable = errors.New("unsendable email")
+
 // SendError is Mailgun refusing to send an email
 type SendError struct {
 	Status int
@@ -48,6 +51,9 @@ func (e *SendError) Error() string {
 // unreachable, rate limiting us or failing itself. Anything else it refuses - a bad key, domain or address - will be
 // refused again.
 func IsRetryable(err error) bool {
+	if errors.Is(err, ErrUnsendable) {
+		return false
+	}
 	var sendErr *SendError
 	if errors.As(err, &sendErr) {
 		return sendErr.Status == http.StatusTooManyRequests || sendErr.Status/100 == 5
@@ -58,16 +64,26 @@ func IsRetryable(err error) bool {
 // Send sends the given email from the given channel. The channel's key is a domain sending key, which only grants
 // this one call.
 func Send(ctx context.Context, rt *runtime.Runtime, ch *models.Channel, cfg *models.EmailConfig, fromName string, e *Email) error {
-	baseURL, ok := MailgunURLs[cfg.Region]
+	region := strings.ToLower(cfg.Region)
+	if region == "" {
+		region = "us" // the region the platform defaults to
+	}
+	baseURL, ok := MailgunURLs[region]
 	if !ok {
-		baseURL = MailgunURLs["us"] // the region the platform defaults to
+		return fmt.Errorf("%w: unknown mailgun region %q", ErrUnsendable, cfg.Region)
+	}
+
+	// Mailgun takes a list of recipients, but a visitor's email must only ever reach them
+	to, err := mail.ParseAddress(e.To)
+	if err != nil {
+		return fmt.Errorf("%w: invalid recipient address", ErrUnsendable)
 	}
 
 	from := (&mail.Address{Name: fromName, Address: cfg.From}).String()
 
 	form := url.Values{
 		"from":    {from},
-		"to":      {e.To},
+		"to":      {to.Address},
 		"subject": {e.Subject},
 		"text":    {e.Text},
 		"html":    {e.HTML},

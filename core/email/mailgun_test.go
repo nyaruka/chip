@@ -53,10 +53,33 @@ func TestSend(t *testing.T) {
 		"v:channel_uuid": {"0665bf36-4d2e-4c3f-b8a1-9f8e6a5c2d71"},
 	}, reqForm)
 
-	// an unknown region is the default one
+	// a region is case-insensitive, and no region is the default one
+	reqPath = ""
+	cfg.Region = "EU"
+	require.NoError(t, email.Send(ctx, rt, ch, cfg, "Nyaruka", e))
+	assert.Equal(t, "/eu/v3/mg.example.com/messages", reqPath)
+
 	cfg.Region = ""
 	require.NoError(t, email.Send(ctx, rt, ch, cfg, "Nyaruka", e))
 	assert.Equal(t, "/us/v3/mg.example.com/messages", reqPath)
+
+	// an unknown region, or anything but a single recipient, can't be sent - and isn't worth trying again
+	reqPath = ""
+	for _, tc := range []struct {
+		region, to string
+	}{
+		{"ap", "bob@example.com"},
+		{"us", "bob@example.com, eve@example.com"},
+		{"us", "bob"},
+		{"us", ""},
+	} {
+		cfg.Region = tc.region
+		err := email.Send(ctx, rt, ch, cfg, "Nyaruka", &email.Email{To: tc.to, Subject: "Hi", Text: "Hi", HTML: "Hi"})
+		assert.ErrorIs(t, err, email.ErrUnsendable, tc)
+		assert.False(t, email.IsRetryable(err), tc)
+	}
+	assert.Equal(t, "", reqPath)
+	cfg.Region = "us"
 
 	// Mailgun refusing is an error that says whether trying again could help
 	for _, tc := range []struct {

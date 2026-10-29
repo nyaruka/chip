@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"embed"
 	htmltemplate "html/template"
+	"net/url"
 	"path"
 	"strings"
 	texttemplate "text/template"
@@ -57,10 +58,10 @@ func Render(to, orgName string, tz *time.Location, msgs []*models.ChatMsg) (*Ema
 			mc.Lines = strings.Split(m.Text, "\n")
 		}
 		for _, att := range m.Attachments {
-			contentType, url, _ := strings.Cut(att, ":")
+			contentType, attURL, _ := strings.Cut(att, ":")
 			mc.Attachments = append(mc.Attachments, &attachmentContext{
-				URL:     url,
-				Name:    path.Base(url),
+				URL:     attURL,
+				Name:    attachmentName(attURL),
 				IsImage: strings.HasPrefix(contentType, "image/"),
 			})
 		}
@@ -89,4 +90,13 @@ func Render(to, orgName string, tz *time.Location, msgs []*models.ChatMsg) (*Ema
 	}
 
 	return &Email{To: to, Subject: subject, Text: text.String(), HTML: html.String()}, nil
+}
+
+// attachmentName returns the file name to show for an attachment URL - from its decoded path, so a signed URL's
+// query string and percent-encoding don't end up in it
+func attachmentName(attURL string) string {
+	if u, err := url.Parse(attURL); err == nil && u.Path != "" {
+		return path.Base(u.Path)
+	}
+	return attURL
 }

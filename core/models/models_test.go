@@ -102,6 +102,8 @@ func TestChannelEmailConfig(t *testing.T) {
 		config("email_from", "help@example.com", "mailgun_domain", "", "mailgun_region", "us", "mailgun_api_key", "key-1"),
 		config("email_from", "", "mailgun_domain", "mg.example.com", "mailgun_region", "us", "mailgun_api_key", "key-1"),
 		config("email_from", "help@example.com", "mailgun_domain", "mg.example.com", "mailgun_region", "us", "mailgun_api_key", ""),
+		{"email_from": "help@example.com", "mailgun_domain": "mg.example.com", "mailgun_region": "us", "mailgun_api_key": 123},
+		{"email_from": []any{"help@example.com"}, "mailgun_domain": "mg.example.com", "mailgun_region": "us", "mailgun_api_key": "key-1"},
 	} {
 		ch := &models.Channel{Config_: c}
 		assert.Nil(t, ch.EmailConfig(), c)
