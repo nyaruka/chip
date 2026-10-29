@@ -9,12 +9,17 @@ import (
 	valkey "github.com/gomodule/redigo/redis"
 	"github.com/nyaruka/chip/v26/core/models"
 	"github.com/nyaruka/chip/v26/runtime"
+	"github.com/nyaruka/gocommon/centrifugo"
 	"github.com/nyaruka/gocommon/dates"
 )
 
 const (
-	// how long a conversation has to go quiet before its unread messages are emailed, so a burst goes as one email
-	quietPeriod = 3 * time.Minute
+	// how long a conversation has to go quiet before its unread messages are emailed, so a burst goes as one email.
+	// A visitor with the chat open may be reading along, so gets longer. One without it open has already been gone a
+	// while by the time their chat's presence lapses, and for them email is the conversation - just long enough for a
+	// chat that's only starting to load what it's sent from history.
+	quietPeriodConnected = 3 * time.Minute
+	quietPeriodOffline   = 10 * time.Second
 
 	// the longest a message is held back however chatty the conversation stays
 	maxHold = 30 * time.Minute
@@ -25,8 +30,8 @@ const (
 
 // a conversation's pending email is a hash of its address, when its oldest message was held back and how many sends
 // have failed, plus the set of messages held back. Conversations are queued for sending in one sorted set, scored by
-// when they're due. A conversation's due time only ever moves later, so holding back another message never cuts short
-// the wait before retrying a failed send.
+// when they're due. While a failed send waits to be retried, its due time only moves later, so holding back another
+// message never cuts that wait short.
 const keyDue = "chat-email-due"
 
 func pendingKeys(ch models.ChannelUUID, chatID string) (member, state, msgs string) {
@@ -34,16 +39,25 @@ func pendingKeys(ch models.ChannelUUID, chatID string) (member, state, msgs stri
 	return member, "chat-email:" + member, "chat-email-msgs:" + member
 }
 
-// KEYS: due, state, msgs. ARGV: member, msg UUID, address, now, quiet period, max hold, TTL
-var holdScript = valkey.NewScript(3, `
+// KEYS: due, state, msgs, chat presence. ARGV: member, msg UUID, address, now, quiet period if connected, quiet period
+// if not, max hold, TTL
+var holdScript = valkey.NewScript(4, `
 redis.call("SADD", KEYS[3], ARGV[2])
 redis.call("HSET", KEYS[2], "email", ARGV[3])
 redis.call("HSETNX", KEYS[2], "first", ARGV[4])
+local quiet = ARGV[6]
+if redis.call("EXISTS", KEYS[4]) == 1 then
+	quiet = ARGV[5]
+end
 local first = tonumber(redis.call("HGET", KEYS[2], "first"))
-local due = math.min(tonumber(ARGV[4]) + tonumber(ARGV[5]), first + tonumber(ARGV[6]))
-redis.call("ZADD", KEYS[1], "GT", due, ARGV[1])
-redis.call("EXPIRE", KEYS[2], ARGV[7])
-redis.call("EXPIRE", KEYS[3], ARGV[7])
+local due = math.min(tonumber(ARGV[4]) + tonumber(quiet), first + tonumber(ARGV[7]))
+if redis.call("HEXISTS", KEYS[2], "attempts") == 1 then
+	redis.call("ZADD", KEYS[1], "GT", due, ARGV[1])
+else
+	redis.call("ZADD", KEYS[1], due, ARGV[1])
+end
+redis.call("EXPIRE", KEYS[2], ARGV[8])
+redis.call("EXPIRE", KEYS[3], ARGV[8])
 `)
 
 // KEYS: due, state, msgs. ARGV: member
@@ -78,7 +92,8 @@ redis.call("EXPIRE", KEYS[3], ARGV[6])
 `)
 
 // Hold holds back a message delivered to a conversation, to be emailed to the given address if the visitor hasn't
-// read it once the conversation goes quiet
+// read it once the conversation goes quiet - for which how long depends on whether the visitor has the chat open, by
+// the same presence publishing checks
 func Hold(ctx context.Context, rt *runtime.Runtime, ch models.ChannelUUID, chatID string, msg models.MsgUUID, address string) error {
 	vc, err := rt.VK.GetContext(ctx)
 	if err != nil {
@@ -87,8 +102,10 @@ func Hold(ctx context.Context, rt *runtime.Runtime, ch models.ChannelUUID, chatI
 	defer vc.Close()
 
 	member, state, msgs := pendingKeys(ch, chatID)
-	_, err = holdScript.Do(vc, keyDue, state, msgs,
-		member, string(msg), address, dates.Now().Unix(), int(quietPeriod.Seconds()), int(maxHold.Seconds()), int(pendingTTL.Seconds()))
+	presence := centrifugo.SubscriptionKey(models.ChatSocket(ch, chatID))
+	_, err = holdScript.Do(vc, keyDue, state, msgs, presence,
+		member, string(msg), address, dates.Now().Unix(), int(quietPeriodConnected.Seconds()), int(quietPeriodOffline.Seconds()),
+		int(maxHold.Seconds()), int(pendingTTL.Seconds()))
 	return err
 }
 

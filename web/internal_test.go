@@ -99,6 +99,10 @@ func TestSend(t *testing.T) {
 func TestSendHoldsForEmail(t *testing.T) {
 	rt, s, _ := setup(t)
 
+	now := time.Date(2025, 10, 13, 11, 20, 30, 0, time.UTC)
+	dates.SetNowFunc(dates.NewFixedNow(now))
+	defer dates.SetNowFunc(time.Now)
+
 	vc := rt.VK.Get()
 	defer vc.Close()
 
@@ -112,10 +116,16 @@ func TestSendHoldsForEmail(t *testing.T) {
 	}
 	member := string(otherChannelUUID) + ":" + testChatID
 
-	// a message to a contact with an email, on a channel that sends email, is held back once delivered
+	// a message to a contact with an email, on a channel that sends email, is held back once delivered - briefly,
+	// as the visitor doesn't have the chat open...
 	assert.Equal(t, 200, send(`{`+msg("0191e180-7d60-7000-aded-7d8b151cbd5b")+`, "email": "bob@example.com"}`).Code)
+	assertvk.ZScore(t, vc, "chat-email-due", member, float64(now.Add(10*time.Second).Unix()))
+
+	// ...and for longer once they do
+	_, err := vc.Do("SET", centrifugo.SubscriptionKey(models.ChatSocket(otherChannelUUID, testChatID)), "1")
+	require.NoError(t, err)
 	assert.Equal(t, 200, send(`{`+msg("0191e180-7d60-7000-aded-7d8b151cbd5c")+`, "email": "bob@example.com"}`).Code)
-	assertvk.ZCard(t, vc, "chat-email-due", 1)
+	assertvk.ZScore(t, vc, "chat-email-due", member, float64(now.Add(3*time.Minute).Unix()))
 	assertvk.SMembers(t, vc, "chat-email-msgs:"+member, []string{"0191e180-7d60-7000-aded-7d8b151cbd5b", "0191e180-7d60-7000-aded-7d8b151cbd5c"})
 	assertvk.HGet(t, vc, "chat-email:"+member, "email", "bob@example.com")
 
@@ -125,8 +135,6 @@ func TestSendHoldsForEmail(t *testing.T) {
 	assertvk.NotExists(t, vc, "chat-email-msgs:"+member)
 
 	// and one that isn't delivered isn't held back either
-	_, err := vc.Do("SET", centrifugo.SubscriptionKey(models.ChatSocket(otherChannelUUID, testChatID)), "1")
-	require.NoError(t, err)
 	rt.Centrifugo.Client.(*centrifugo.MockClient).SetError(errors.New("boom"))
 	assert.Equal(t, 500, send(`{`+msg("0191e180-7d60-7000-aded-7d8b151cbd5e")+`, "email": "bob@example.com"}`).Code)
 	assertvk.ZCard(t, vc, "chat-email-due", 0)

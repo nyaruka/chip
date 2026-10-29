@@ -12,7 +12,7 @@ import (
 )
 
 const (
-	sweepInterval  = 30 * time.Second
+	sweepInterval  = 5 * time.Second // sets how late an email to a visitor who isn't connected can be
 	sweepBatchSize = 100
 )
 
