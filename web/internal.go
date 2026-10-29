@@ -4,7 +4,6 @@ import (
 	"context"
 	"net/http"
 
-	valkey "github.com/gomodule/redigo/redis"
 	"github.com/nyaruka/chip/v26/core/email"
 	"github.com/nyaruka/chip/v26/core/models"
 	"github.com/nyaruka/gocommon/centrifugo"
@@ -80,23 +79,7 @@ func (s *Server) holdForEmail(ctx context.Context, payload *sendPayload) error {
 		return err
 	}
 
-	connected, err := s.isSubscribed(ctx, models.ChatSocket(payload.ChannelUUID, payload.ChatID))
-	if err != nil {
-		return err
-	}
-
-	return email.Hold(ctx, s.rt, payload.ChannelUUID, payload.ChatID, payload.MsgUUID, payload.Email, connected)
-}
-
-// isSubscribed returns whether the given socket has a subscriber, by the same presence key publishing checks
-func (s *Server) isSubscribed(ctx context.Context, socket string) (bool, error) {
-	vc, err := s.rt.VK.GetContext(ctx)
-	if err != nil {
-		return false, err
-	}
-	defer vc.Close()
-
-	return valkey.Bool(vc.Do("EXISTS", centrifugo.SubscriptionKey(socket)))
+	return email.Hold(ctx, s.rt, payload.ChannelUUID, payload.ChatID, payload.MsgUUID, payload.Email)
 }
 
 // eventPayload is something other than a message that courier has us show the visitor - a user typing

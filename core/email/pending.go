@@ -9,6 +9,7 @@ import (
 	valkey "github.com/gomodule/redigo/redis"
 	"github.com/nyaruka/chip/v26/core/models"
 	"github.com/nyaruka/chip/v26/runtime"
+	"github.com/nyaruka/gocommon/centrifugo"
 	"github.com/nyaruka/gocommon/dates"
 )
 
@@ -38,20 +39,25 @@ func pendingKeys(ch models.ChannelUUID, chatID string) (member, state, msgs stri
 	return member, "chat-email:" + member, "chat-email-msgs:" + member
 }
 
-// KEYS: due, state, msgs. ARGV: member, msg UUID, address, now, quiet period, max hold, TTL
-var holdScript = valkey.NewScript(3, `
+// KEYS: due, state, msgs, chat presence. ARGV: member, msg UUID, address, now, quiet period if connected, quiet period
+// if not, max hold, TTL
+var holdScript = valkey.NewScript(4, `
 redis.call("SADD", KEYS[3], ARGV[2])
 redis.call("HSET", KEYS[2], "email", ARGV[3])
 redis.call("HSETNX", KEYS[2], "first", ARGV[4])
+local quiet = ARGV[6]
+if redis.call("EXISTS", KEYS[4]) == 1 then
+	quiet = ARGV[5]
+end
 local first = tonumber(redis.call("HGET", KEYS[2], "first"))
-local due = math.min(tonumber(ARGV[4]) + tonumber(ARGV[5]), first + tonumber(ARGV[6]))
+local due = math.min(tonumber(ARGV[4]) + tonumber(quiet), first + tonumber(ARGV[7]))
 if redis.call("HEXISTS", KEYS[2], "attempts") == 1 then
 	redis.call("ZADD", KEYS[1], "GT", due, ARGV[1])
 else
 	redis.call("ZADD", KEYS[1], due, ARGV[1])
 end
-redis.call("EXPIRE", KEYS[2], ARGV[7])
-redis.call("EXPIRE", KEYS[3], ARGV[7])
+redis.call("EXPIRE", KEYS[2], ARGV[8])
+redis.call("EXPIRE", KEYS[3], ARGV[8])
 `)
 
 // KEYS: due, state, msgs. ARGV: member
@@ -86,22 +92,20 @@ redis.call("EXPIRE", KEYS[3], ARGV[6])
 `)
 
 // Hold holds back a message delivered to a conversation, to be emailed to the given address if the visitor hasn't
-// read it once the conversation goes quiet - for which how long depends on whether the visitor has the chat open
-func Hold(ctx context.Context, rt *runtime.Runtime, ch models.ChannelUUID, chatID string, msg models.MsgUUID, address string, connected bool) error {
+// read it once the conversation goes quiet - for which how long depends on whether the visitor has the chat open, by
+// the same presence publishing checks
+func Hold(ctx context.Context, rt *runtime.Runtime, ch models.ChannelUUID, chatID string, msg models.MsgUUID, address string) error {
 	vc, err := rt.VK.GetContext(ctx)
 	if err != nil {
 		return err
 	}
 	defer vc.Close()
 
-	quietPeriod := quietPeriodOffline
-	if connected {
-		quietPeriod = quietPeriodConnected
-	}
-
 	member, state, msgs := pendingKeys(ch, chatID)
-	_, err = holdScript.Do(vc, keyDue, state, msgs,
-		member, string(msg), address, dates.Now().Unix(), int(quietPeriod.Seconds()), int(maxHold.Seconds()), int(pendingTTL.Seconds()))
+	presence := centrifugo.SubscriptionKey(models.ChatSocket(ch, chatID))
+	_, err = holdScript.Do(vc, keyDue, state, msgs, presence,
+		member, string(msg), address, dates.Now().Unix(), int(quietPeriodConnected.Seconds()), int(quietPeriodOffline.Seconds()),
+		int(maxHold.Seconds()), int(pendingTTL.Seconds()))
 	return err
 }
 
