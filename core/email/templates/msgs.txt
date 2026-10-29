@@ -1,0 +1,11 @@
+{{range .Msgs -}}
+{{.Sender}} ({{.Time}}):
+{{range .Lines}}{{.}}
+{{end -}}
+{{range .Attachments}}{{.URL}}
+{{end -}}
+{{if .QuickReplies}}Options: {{.QuickReplies}}
+{{end}}
+{{end -}}
+--
+You're receiving this because you chatted with {{.OrgName}} and haven't seen these messages yet. To reply, continue the chat on our website.
