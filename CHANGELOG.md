@@ -1,3 +1,7 @@
+## v26.3.5 (2026-11-20)
+ * Set a max lifetime on database connections
+ * Run CI against PostgreSQL 18
+
 ## v26.3.4 (2026-11-04)
  * Add channel email config, Mailgun client and unread message email rendering
  * Refuse unknown Mailgun regions and anything but a single recipient, and name attachments from their decoded path
