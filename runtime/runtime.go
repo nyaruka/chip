@@ -3,6 +3,7 @@ package runtime
 import (
 	"context"
 	"fmt"
+	"time"
 
 	valkey "github.com/gomodule/redigo/redis"
 	_ "github.com/lib/pq" // postgres driver
@@ -37,6 +38,8 @@ func NewRuntime(cfg *Config) (*Runtime, error) {
 	}
 	rt.DB.SetMaxIdleConns(4)
 	rt.DB.SetMaxOpenConns(16)
+	// recycle connections so a failover to a new primary is picked up even though chip never sees a read-only error
+	rt.DB.SetConnMaxLifetime(10 * time.Minute)
 
 	rt.VK, err = vkutil.NewPool(cfg.Valkey, vkutil.WithMaxActive(16))
 	if err != nil {
